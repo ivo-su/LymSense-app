@@ -4,13 +4,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "preview": "vite preview",
+    "vite": "vite",
+    "build": "tsc && vite build",
     "tauri": "tauri",
-    "dev:python": "./python-backend/venv/bin/python python-backend/main.py",
-    "dev:tauri": "tauri dev",
-    "dev": "concurrently \"npm run dev:python\" \"npm run dev:tauri\""
-  },
+    "python": "./src-py/venv/bin/python src-py/main.py",
+    "dev": "concurrently \"npm run python\" \"npm run tauri dev\""
+},
   "dependencies": {
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",

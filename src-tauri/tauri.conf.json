@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "identifier": "com.ivan.lymsense-app",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run vite",
     "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
-  },
+},
   "app": {
     "windows": [
       {
