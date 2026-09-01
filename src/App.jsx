@@ -1,8 +1,11 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import { HashRouter, Link, Route, Routes } from "react-router";
+import { HashRouter, Link, Outlet, Route, Routes } from "react-router";
+import SignUp from "./pages/SignUp";
+import SignIn from "./pages/SignIn";
+import Home from "./pages/Home";
+import Nav from "./components/Nav";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -16,15 +19,21 @@ function App() {
   return (
     <HashRouter>
       <main className="container">
-        <nav>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-          <Link to="/contact">Contact</Link>
-        </nav>
         <Routes>
-          <Route path="/" element={<h1>Hello World!</h1>} />
-          <Route path="/about" element={<h1>About</h1>} />
-          <Route path="/contact" element={<h1>Contact</h1>} />
+          <Route path="/" element={
+            <>
+            <Nav/>
+            <div className="content">
+              <Outlet/>
+            </div>
+            </>
+          }>
+            <Route index element={<Home/>} />
+            <Route path="/about" element={<h1>About</h1>} />
+            <Route path="/contact" element={<h1>Contact</h1>} />
+          </Route>
+          <Route path="/signup" element={<SignUp/>} />
+          <Route path="/signin" element={<SignIn/>} />
         </Routes>
       </main>
     </HashRouter>

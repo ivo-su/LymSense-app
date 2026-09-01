@@ -1,5 +1,6 @@
 #activate venv: source venv/bin/activate
 #freeze requirements: pip freeze > requirements.txt
+#cargo fix source $HOME/.cargo/env
 
 from fastapi import FastAPI
 import uvicorn

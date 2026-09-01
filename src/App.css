@@ -1,10 +1,3 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
-}
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
   font-size: 16px;
@@ -21,81 +14,11 @@
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
+body {
   margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
+  padding: 0;
 }
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
     background-color: #2f2f2f;
@@ -113,4 +36,163 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
+} */
+
+.container {
+  margin: 0;
+  /* padding-top: 10vh; */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+.content{
+  display: flex;
+  margin: 0 auto;
+  width: 100%;
+  padding: 4em 5em;
+}
+
+nav.main-nav {
+  position: fixed;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 1em 2em;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+  /* box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.2); */
+}
+
+nav.main-nav>div{
+  display: flex;
+  align-items: center;
+  gap: .5em;
+}
+
+nav.main-nav div:first-child{
+  justify-content: start;
+}
+
+nav.main-nav div:last-child{
+  justify-content: end;
+}
+
+nav.main-nav a{
+  font-weight: 500;
+  color: #777777;
+  text-decoration: inherit;
+  transition: color 0.25s, background-color 0.25s;
+  padding: 0.3em .6em;
+  border-radius: 8px;
+}
+
+nav.main-nav a:hover{
+  color: #396cd8;
+}
+
+nav.main-nav a:active{
+  color: #396cd8;
+  background-color: #e8e8e8;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+}
+
+input,
+button.btn {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  color: #0f0f0f;
+  background-color: #ffffff;
+  transition: border-color 0.25s;
+  box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: .5em;
+}
+
+button {
+  cursor: pointer;
+}
+
+button.btn:hover {
+  border-color: #396cd8;
+}
+button.btn:active {
+  border-color: #396cd8;
+  background-color: #e8e8e8;
+}
+
+input,
+button {
+  outline: none;
+}
+
+
+
+.col{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+form.col{
+  gap: 1em;
+  align-items: center;
+  padding: 1em 0;
+}
+
+.input-container{
+  display: flex;
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+}
+
+.input-container input{
+  /* padding: 0.6em 1.2em; */
+  width: 100%;
+}
+
+.input-container label{
+  position: absolute;
+  top: 50%;
+  left: 1em;
+  transform: translateY(-50%);
+  transition: transform 0.1s ease-in-out;
+}
+
+.input-container input:focus + label,
+.input-container input:not(:placeholder-shown) + label{
+  transform: translateY(-140%);
+}
+
+.input-container.pass-input>input{
+  padding-right: 3.5em;
+}
+
+.input-container.pass-input>p{
+  position: absolute;
+  height: 100%;
+  top: 0%;
+  display: flex;
+  align-items: center;
+  right: 1em;
+  margin: 0;
+  /* background-color: #fff; */
+  padding: 0 0 0 0.5em;
+  transition: opacity 0.1s ease-in-out;
+}
+
+.input-container.pass-input>input:placeholder-shown + label + p{
+  opacity: 0;
 }
