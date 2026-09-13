@@ -6,6 +6,9 @@ import SignUp from "./pages/SignUp";
 import SignIn from "./pages/SignIn";
 import Home from "./pages/Home";
 import Nav from "./components/Nav";
+import Patients from "./pages/Patients";
+import Logs from "./pages/Logs";
+import Patient from "./pages/Patient";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -31,6 +34,9 @@ function App() {
             <Route index element={<Home/>} />
             <Route path="/about" element={<h1>About</h1>} />
             <Route path="/contact" element={<h1>Contact</h1>} />
+            <Route path="/logs" element={<Logs/>} />
+            <Route path="/patients" element={<Patients/>} />
+            <Route path="/patients/:id" element={<Patient/>} />
           </Route>
           <Route path="/signup" element={<SignUp/>} />
           <Route path="/signin" element={<SignIn/>} />

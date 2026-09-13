@@ -1,0 +1,39 @@
+{
+  "patients": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "gender": "m",
+      "logs":[
+        {
+          "z_ref":12.53,
+          "z_lymph":14.23,
+          "ph_ref":7.4,
+          "ph_lymph":7.2,
+          "date":"2023-06-01"
+        },
+        {
+          "z_ref":12.53,
+          "z_lymph":14.23,
+          "ph_ref":7.4,
+          "ph_lymph":7.2,
+          "date":"2023-06-02"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "gender": "f",
+      "logs":[
+        {
+          "z_ref":10.86,
+          "z_lymph":18.34,
+          "ph_ref":6.3,
+          "ph_lymph":8.2,
+          "date":"2023-08-11"
+        }
+      ]
+    }
+  ]
+}

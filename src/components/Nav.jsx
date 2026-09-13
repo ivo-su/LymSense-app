@@ -5,11 +5,11 @@ function Nav(){
     <nav className="main-nav">
       <div>
         <Link to="/">Home</Link>
-        <Link to="/about">About</Link>
-        <Link to="/contact">Contact</Link>
+        <Link to="/about">Acerca de</Link>
+        <Link to="/contact">Contacto</Link>
       </div>
       <div>
-        <Link to="/signup">Sign Up</Link>
+        <Link to="/signup">Registrarse</Link>
       </div>
     </nav>
   )
