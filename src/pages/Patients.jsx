@@ -4,8 +4,10 @@ import { Link } from "react-router";
 
 function Patients(){
   return(<>
+  <div className="box" style={{display: 'flex', flexDirection: 'column', justifyContent: 'start', alignItems: 'start', gap: "1em"}}>
+
     <h1>Pacientes</h1>
-    <div style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
+    <div style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em", width: "100%"}}>
       <input type="text" placeholder="Buscar paciente..." />
       <button className="btn" style={{alignSelf: 'stretch'}}><LuSearch size={18} /></button>
       <span style={{margin:"0 0 0 auto"}}>Ordenar por:</span>
@@ -17,6 +19,7 @@ function Patients(){
         ]} defaultValue="name-asc" />
       </div>
     </div>
+  </div>
     <div className="grid-2">
     {
       Array(5).fill(0).map((_, index) => 

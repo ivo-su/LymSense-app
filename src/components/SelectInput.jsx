@@ -82,10 +82,15 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 const styles = {
 	container: { position: 'relative', width: '100%', maxWidth: 320, fontFamily: 'inherit' },
 	trigger: {
-		alignItems: 'center', background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6,
+		alignItems: 'center', background: 'none', border: 'none', borderRadius: 6,
 		boxSizing: 'border-box', cursor: 'pointer', display: 'flex', font: 'inherit', justifyContent: 'space-between',
-		minHeight: 42, padding: '10px 12px', textAlign: 'left', width: '100%',
+		minHeight: 0, padding: '0', textAlign: 'left', width: '100%',
 	},
+	// trigger: {
+	// 	alignItems: 'center', background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6,
+	// 	boxSizing: 'border-box', cursor: 'pointer', display: 'flex', font: 'inherit', justifyContent: 'space-between',
+	// 	minHeight: 42, padding: '10px 12px', textAlign: 'left', width: '100%',
+	// },
 	placeholder: { color: '#64748b' },
 	value: { color: '#0f172a' },
 	arrow: { color: '#475569', fontSize: 18, lineHeight: 1, transition: 'transform 150ms ease',  display: 'flex', alignItems: 'center' },

@@ -3,10 +3,10 @@ import SelectInput from "../components/SelectInput";
 
 function Logs(){
   return (<>
-    <div style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
+    <div className="box" style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
       <h1>Registros</h1>
       <span style={{margin:"0 0 0 auto"}}>Ordenar por:</span>
-      <div style={{width: "200px"}}>
+      <div style={{width: "150px"}}>
         <SelectInput options={[
           { value: 'date', label: 'Fecha' },
           { value: 'patient', label: 'Paciente' },

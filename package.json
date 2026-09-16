@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "tauri": "tauri",
     "python": "./src-py/venv/bin/python src-py/main.py",
+    "cargo":"source $HOME/.cargo/env",
     "dev": "concurrently \"npm run python\" \"npm run tauri dev\""
   },
   "dependencies": {
