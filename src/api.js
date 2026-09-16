@@ -33,6 +33,10 @@ export function getPatients(search = "") {
   return request(`/patients${query}`);
 }
 
+export function getPatient(patientId) {
+  return request(`/patients/${patientId}`);
+}
+
 export function createPatient(patient) {
   return request("/patients", {
     method: "POST",

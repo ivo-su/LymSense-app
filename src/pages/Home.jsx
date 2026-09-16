@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router";
 import LogItem from "../components/LogItem";
 import PatientItem from "../components/PatientItem";
 import SelectInput from "../components/SelectInput";
-import { createLog, createPatient, getPatients } from "../api";
+import { createLog, createPatient, getLogs, getPatients } from "../api";
 
 function NewLogForm({ patients, onSaved, onPatientsReload }) {
   const [error, setError] = useState("");
@@ -121,10 +121,34 @@ function Home() {
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isPatientOpen, setIsPatientOpen] = useState(false);
   const [patients, setPatients] = useState([]);
+  const [recentLogs, setRecentLogs] = useState([]);
+  const [nextPatients, setNextPatients] = useState([]);
   const [patientsError, setPatientsError] = useState("");
 
   useEffect(() => {
-    getPatients().then(setPatients).catch((error) => setPatientsError(error.message));
+    Promise.all([getPatients(), getLogs()])
+      .then(([loadedPatients, loadedLogs]) => {
+        setPatients(loadedPatients);
+        setRecentLogs(loadedLogs.slice(0, 5));
+
+        const latestLogByPatient = new Map();
+        loadedLogs.forEach((log) => {
+          const currentLatest = latestLogByPatient.get(log.patient_id);
+          if (!currentLatest || new Date(log.imported_at) > new Date(currentLatest)) {
+            latestLogByPatient.set(log.patient_id, log.imported_at);
+          }
+        });
+
+        setNextPatients([...loadedPatients].sort((firstPatient, secondPatient) => {
+          const firstLatest = latestLogByPatient.get(firstPatient.id);
+          const secondLatest = latestLogByPatient.get(secondPatient.id);
+          if (!firstLatest && !secondLatest) return 0;
+          if (!firstLatest) return -1;
+          if (!secondLatest) return 1;
+          return new Date(firstLatest) - new Date(secondLatest);
+        }).slice(0, 5));
+      })
+      .catch((error) => setPatientsError(error.message));
   }, []);
 
   const openLogModal = async () => {
@@ -154,15 +178,15 @@ function Home() {
         <div style={{display: 'flex', flexDirection:'column', justifyContent: 'start', alignItems: 'stretch', gap: "1em", flex: 1}}>
           <h3>Últimos registros</h3>
           <div className="box log-list">
-            {Array(5).fill(0).map((_, index) =>
-              <LogItem key={index} />
-              )}
+            {!patientsError && recentLogs.length === 0 && <p>No hay registros guardados.</p>}
+            {recentLogs.map((log) => <LogItem key={log.id} log={log} />)}
           </div>
         </div>
         <div style={{display: 'flex', flexDirection:'column', justifyContent: 'start', alignItems: 'stretch', gap: "1em", flex: 1}}>
           <h3 style={{ textAlign: 'start'}}>Próximos pacientes</h3>
           <div className="box log-list">
-            <PatientItem/>
+            {!patientsError && nextPatients.length === 0 && <p>No hay pacientes guardados.</p>}
+            {nextPatients.map((patient) => <PatientItem key={patient.id} patient={patient} />)}
           </div>
         </div>
         

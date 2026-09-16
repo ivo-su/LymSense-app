@@ -72,6 +72,7 @@ def patient_from_row(row):
         "gender": row["gender"],
         "logs": [],
         "created_at": row["created_at"],
+        "last_log_at": row["last_log_at"] if "last_log_at" in row.keys() else None,
     }
 
 
@@ -86,10 +87,60 @@ def home():
 def list_patients(search: str = Query(default="", max_length=200)):
     with get_connection() as connection:
         rows = connection.execute(
-            "SELECT * FROM patients WHERE name LIKE ? COLLATE NOCASE ORDER BY name COLLATE NOCASE",
+            """
+            SELECT patients.*, MAX(logs.imported_at) AS last_log_at
+            FROM patients
+            LEFT JOIN logs ON logs.patient_id = patients.id
+            WHERE patients.name LIKE ? COLLATE NOCASE
+            GROUP BY patients.id
+            ORDER BY patients.name COLLATE NOCASE
+            """,
             (f"%{search.strip()}%",),
         ).fetchall()
     return [patient_from_row(row) for row in rows]
+
+
+@app.get("/patients/{patient_id}")
+def get_patient(patient_id: int):
+    with get_connection() as connection:
+        patient = connection.execute(
+            """
+            SELECT patients.*, MAX(logs.imported_at) AS last_log_at
+            FROM patients
+            LEFT JOIN logs ON logs.patient_id = patients.id
+            WHERE patients.id = ?
+            GROUP BY patients.id
+            """,
+            (patient_id,),
+        ).fetchone()
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        logs = connection.execute(
+            """
+            SELECT id, patient_id, filename, ldex, imported_at,
+                   log_number, total_logs
+            FROM (
+                SELECT logs.id, logs.patient_id, logs.filename, logs.ldex,
+                       logs.imported_at,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY logs.patient_id
+                           ORDER BY logs.imported_at ASC, logs.id ASC
+                       ) AS log_number,
+                       COUNT(*) OVER (
+                           PARTITION BY logs.patient_id
+                       ) AS total_logs
+                FROM logs
+                WHERE logs.patient_id = ?
+            )
+            ORDER BY imported_at ASC, id ASC
+            """,
+            (patient_id,),
+        ).fetchall()
+
+    result = patient_from_row(patient)
+    result["logs"] = [dict(log) for log in logs]
+    return result
 
 
 @app.post("/patients", status_code=201)

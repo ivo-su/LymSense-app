@@ -4,7 +4,7 @@ ChartJS.defaults.transitions.resize.animation.duration = 0;
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
-function LineGraph(){
+function LineGraph({ logs = [] }){
   const options = {
     responsive: true,
     // animation: false,
@@ -37,11 +37,11 @@ function LineGraph(){
     }
   }
   const data = {
-    labels: [1,2,3,4,5],
+    labels: logs.map((log) => log.log_number),
     datasets: [
       {
         label: 'L-dex',
-        data: [1.4, 5.2, 9.1, 14.8, 24.3],
+        data: logs.map((log) => log.ldex),
         borderColor: '#00AAA5',
         backgroundColor: '#00AAA5',
         pointBackgroundColor: '#00AAA5'

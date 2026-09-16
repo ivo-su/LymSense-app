@@ -4,6 +4,23 @@ import { Link } from "react-router"
 function PatientItem({ patient, onDelete }){
   const patientId = patient?.id ?? 1;
   const patientName = patient?.name ?? "John Doe";
+  const timeSinceLastLog = getTimeSinceLastLog(patient?.last_log_at);
+
+  function getTimeSinceLastLog(lastLogAt) {
+    if (!lastLogAt) return "Sin registros";
+
+    const elapsedDays = Math.max(
+      0,
+      Math.round((Date.now() - new Date(lastLogAt).getTime()) / 86400000)
+    );
+    if (elapsedDays < 30) return `${elapsedDays} ${elapsedDays === 1 ? "día" : "días"}`;
+
+    const elapsedMonths = Math.round(elapsedDays / 30);
+    if (elapsedMonths < 12) return `${elapsedMonths} ${elapsedMonths === 1 ? "mes" : "meses"}`;
+
+    const elapsedYears = Math.round(elapsedDays / 365);
+    return `${elapsedYears} ${elapsedYears === 1 ? "año" : "años"}`;
+  }
 
   return <>
 
@@ -30,7 +47,7 @@ function PatientItem({ patient, onDelete }){
         <div className="icon-container">
           <LuHistory size={18} /> 
         </div> 
-        2 meses
+        {timeSinceLastLog}
       </div>
       {onDelete && <button
         type="button"
