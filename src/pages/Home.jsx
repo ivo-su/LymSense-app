@@ -6,8 +6,26 @@ import { Link } from "react-router";
 import LogItem from "../components/LogItem";
 import PatientItem from "../components/PatientItem";
 
+function NewPatientForm(){
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target)
+    const data = Object.fromEntries(formData.entries())
+    console.log(data)
+  }
+
+  return <form className="col" onSubmit={handleSubmit} id="new-patient-form">
+    <div className="input-container">
+      <input type="text" name='name' placeholder="" required/>
+      <label htmlFor="">Nombre completo</label>
+    </div>
+  </form>
+}
+
 function Home() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLogOpen, setIsLogOpen] = useState(false);
+  const [isPatientOpen, setIsPatientOpen] = useState(false);
 
   return (
     <>
@@ -16,9 +34,9 @@ function Home() {
         <span style={{ margin: "0 0 0 auto", fontSize: '0.9em', color: '#666', display: 'flex', alignItems: 'center', gap: "0.5em" }}><LuTriangleAlert size={20} /> El dispositivo está offline</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
-        <button className="btn" onClick={() => setIsModalOpen(true)}><LuCirclePlus /> Nuevo registro</button>
+        <button className="btn" onClick={() => setIsLogOpen(true)}><LuCirclePlus /> Nuevo registro</button>
         <Link to="/logs" className="btn"><LuList />Ver registros</Link>
-        <button className="btn"><LuUserPlus /> Nuevo paciente</button>
+        <button className="btn" onClick={()=> setIsPatientOpen(true)}><LuUserPlus /> Nuevo paciente</button>
         <Link to="/patients" className="btn"><LuUsers />Ver pacientes</Link>
       </div>
 
@@ -41,12 +59,20 @@ function Home() {
       </div>
       
 
-      <Modal isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+      <Modal isOpen={isLogOpen}
+        onClose={() => setIsLogOpen(false)}
         title="Modal de ejemplo"
         footer={<button className="btn" onClick={() => console.log("Acción del modal")}>Acción</button>}
       >
         <p>Este es un modal de ejemplo.</p>
+      </Modal>
+
+      <Modal isOpen={isPatientOpen}
+        onClose={() => setIsPatientOpen(false)}
+        title="Nuevo paciente"
+        footer={<button className="btn" form="new-patient-form" onClick={() => console.log("Acción del modal")}>Guardar</button>}
+      >
+        <NewPatientForm/>
       </Modal>
     </>
   );
