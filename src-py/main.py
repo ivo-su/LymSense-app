@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 import os
+import math
 import sqlite3
 
 from fastapi import FastAPI, HTTPException, Query
@@ -44,6 +45,24 @@ def initialize_database():
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                filename TEXT NOT NULL,
+                content TEXT,
+                ldex REAL,
+                imported_at TEXT NOT NULL,
+                FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+            )
+            """
+        )
+        columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(logs)")
+        }
+        if "ldex" not in columns:
+            connection.execute("ALTER TABLE logs ADD COLUMN ldex REAL")
 
 
 def patient_from_row(row):
@@ -89,6 +108,77 @@ def create_patient(patient: PatientCreate):
             "SELECT * FROM patients WHERE id = ?", (cursor.lastrowid,)
         ).fetchone()
     return patient_from_row(row)
+
+
+class LogCreate(BaseModel):
+    patient_id: int
+    filename: str = Field(min_length=1, max_length=255)
+    ldex: float
+
+
+@app.post("/logs", status_code=201)
+def create_log(log: LogCreate):
+    if not math.isfinite(log.ldex):
+        raise HTTPException(status_code=422, detail="lDex debe ser un número válido")
+
+    imported_at = datetime.now(timezone.utc).isoformat()
+    with get_connection() as connection:
+        patient = connection.execute(
+            "SELECT id FROM patients WHERE id = ?", (log.patient_id,)
+        ).fetchone()
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        cursor = connection.execute(
+            """
+            INSERT INTO logs (patient_id, filename, content, ldex, imported_at)
+            VALUES (?, ?, '', ?, ?)
+            """,
+            (log.patient_id, log.filename.strip(), log.ldex, imported_at),
+        )
+
+    return {
+        "id": cursor.lastrowid,
+        "patient_id": log.patient_id,
+        "filename": log.filename.strip(),
+        "ldex": log.ldex,
+        "imported_at": imported_at,
+    }
+
+
+@app.get("/logs")
+def list_logs():
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, patient_id, patient_name, filename, ldex, imported_at,
+                   log_number, total_logs
+            FROM (
+                SELECT logs.id, logs.patient_id, patients.name AS patient_name,
+                       logs.filename, logs.ldex, logs.imported_at,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY logs.patient_id
+                           ORDER BY logs.imported_at ASC, logs.id ASC
+                       ) AS log_number,
+                       COUNT(*) OVER (
+                           PARTITION BY logs.patient_id
+                       ) AS total_logs
+                FROM logs
+                INNER JOIN patients ON patients.id = logs.patient_id
+            )
+            ORDER BY imported_at DESC, id DESC
+            """
+        ).fetchall()
+
+    return [dict(row) for row in rows]
+
+
+@app.delete("/logs/{log_id}", status_code=204)
+def delete_log(log_id: int):
+    with get_connection() as connection:
+        result = connection.execute("DELETE FROM logs WHERE id = ?", (log_id,))
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
 
 
 @app.delete("/patients/{patient_id}", status_code=204)

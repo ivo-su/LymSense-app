@@ -245,7 +245,8 @@ nav.main-nav a:active{
 
 input,
 button.btn,
-a.btn {
+a.btn,
+.custom-select .trigger{
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
@@ -289,7 +290,7 @@ button {
 }
 
 form.col{
-  gap: 1em;
+  gap: 1.5em;
   align-items: center;
   padding: 1em 0;
 }
@@ -315,7 +316,8 @@ form.col{
 }
 
 .input-container input:focus + label,
-.input-container input:not(:placeholder-shown) + label{
+.input-container input:not(:placeholder-shown) + label,
+.input-container .custom-select + label{
   transform: translateY(-140%);
 }
 
@@ -469,7 +471,7 @@ form.col{
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  align-items: stretch;
+  align-items: center;
   gap: 1em;
   border-bottom: 1px solid #e0e0e0;  
   padding: 0.75em 1em;
@@ -498,6 +500,6 @@ form.col{
   background-color: #6262620e;
   padding: 0.25em 0.25em;
   border-radius: 0.25rem;
-  border:1px solid #e0e0e0;
+  border: 1px solid #e0e0e0;
   /* box-shadow: 0 0 1px 0 rgba(0, 0, 0, 0.2); */
 }

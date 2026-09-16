@@ -43,3 +43,18 @@ export function createPatient(patient) {
 export function deletePatient(patientId) {
   return request(`/patients/${patientId}`, { method: "DELETE" });
 }
+
+export function createLog(log) {
+  return request("/logs", {
+    method: "POST",
+    body: JSON.stringify(log),
+  });
+}
+
+export function getLogs() {
+  return request("/logs");
+}
+
+export function deleteLog(logId) {
+  return request(`/logs/${logId}`, { method: "DELETE" });
+}
