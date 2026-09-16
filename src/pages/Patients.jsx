@@ -1,12 +1,15 @@
 import { LuSearch, LuUser } from "react-icons/lu";
 import SelectInput from "../components/SelectInput";
 import { Link } from "react-router";
+import PatientItem from "../components/PatientItem";
 
 function Patients(){
   return(<>
-  <div className="box" style={{display: 'flex', flexDirection: 'column', justifyContent: 'start', alignItems: 'start', gap: "1em"}}>
-
+  <div className="box">
     <h1>Pacientes</h1>
+  </div>
+  <div className="box toolbar" style={{display: 'flex', flexDirection: 'column', justifyContent: 'start', alignItems: 'start', gap: "1em"}}>
+
     <div style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em", width: "100%"}}>
       <input type="text" placeholder="Buscar paciente..." />
       <button className="btn" style={{alignSelf: 'stretch'}}><LuSearch size={18} /></button>
@@ -20,17 +23,10 @@ function Patients(){
       </div>
     </div>
   </div>
-    <div className="grid-2">
+    <div className="box log-list">
     {
       Array(5).fill(0).map((_, index) => 
-        <div className="card" key={index}>
-          <div className="user-icon">
-            <LuUser size={24} />
-          </div>
-            <Link to={`/patients/1`}><span>John Doe</span></Link>
-            <span>Registros: 5</span>
-            <span style={{ fontSize: '0.9em', color: '#666' }}>2023-05-15</span>
-        </div>
+        <PatientItem/>
       )
     }
     </div>  </>)

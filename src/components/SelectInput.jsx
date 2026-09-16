@@ -96,11 +96,11 @@ const styles = {
 	arrow: { color: '#475569', fontSize: 18, lineHeight: 1, transition: 'transform 150ms ease',  display: 'flex', alignItems: 'center' },
 	menu: {
 		background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12)',
-		left: 0, maxHeight: 240, overflowY: 'auto', padding: 4, position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 10,
+		left: 0, maxHeight: 240, overflowY: 'auto', padding: 4, position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 99,
 	},
 	option: {
 		background: '#fff', border: 0, borderRadius: 4, cursor: 'pointer', display: 'block', font: 'inherit',
-		padding: '10px 12px', textAlign: 'left', width: '100%',
+		padding: '10px 12px', textAlign: 'left', width: '100%'
 	},
 	selected: { background: '#e0f2fe', color: '#0369a1' },
 	disabled: { cursor: 'not-allowed', opacity: 0.6 },

@@ -7,14 +7,14 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 function LineGraph(){
   const options = {
     responsive: true,
-    animation: false,
+    // animation: false,
     maintainAspectRatio: false,
     resizeDelay: 0,
-    transitions: {
-      resize: {
-        animation: false
-      }
-    },
+    // transitions: {
+    //   resize: {
+    //     animation: false
+    //   }
+    // },
     // aspectRatio: 2,
     plugins: {
       legend: {
