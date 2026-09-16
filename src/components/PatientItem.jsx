@@ -1,7 +1,10 @@
 import { LuChartLine, LuHash, LuHistory, LuUser } from "react-icons/lu"
 import { Link } from "react-router"
 
-function PatientItem(){
+function PatientItem({ patient }){
+  const patientId = patient?.id ?? 1;
+  const patientName = patient?.name ?? "John Doe";
+
   return <>
 
       <div className="log-list-item">
@@ -9,7 +12,7 @@ function PatientItem(){
         <LuUser size={24} />
       </div>
       <div style={{margin: "0 0 0 1em", display: 'flex', flexDirection: 'column', gap: "0.0em", justifyContent: 'center', alignItems: 'start'}}>
-        <Link to="/patients/1" style={{fontWeight: '500'}}>John Doe</Link>
+        <Link to={`/patients/${patientId}`} style={{fontWeight: '500'}}>{patientName}</Link>
       </div>
       <div style={{ margin: "0 0 0 auto", display: 'flex', flexDirection: 'row', gap: ".5em", justifyContent: 'center', alignItems: 'center'}}>
             <div className="icon-container">

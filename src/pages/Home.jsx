@@ -1,18 +1,29 @@
 import { LuAlignEndHorizontal, LuArrowDownToLine, LuChartLine, LuCirclePlus, LuFileCheck, LuHash, LuHistory, LuList, LuTriangleAlert, LuUser, LuUserPlus, LuUsers } from "react-icons/lu";
-import { getPatients } from "../dev/getFakeData";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Modal from "../components/Modal";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import LogItem from "../components/LogItem";
 import PatientItem from "../components/PatientItem";
+import { createPatient } from "../api";
 
-function NewPatientForm(){
-  
-  const handleSubmit = (e) => {
+function NewPatientForm({ onSaved }){
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target)
-    const data = Object.fromEntries(formData.entries())
-    console.log(data)
+    setError("");
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    try {
+      await createPatient(Object.fromEntries(formData.entries()));
+      form.reset();
+      onSaved();
+      navigate("/patients");
+    } catch (submitError) {
+      setError(submitError.message);
+    }
   }
 
   return <form className="col" onSubmit={handleSubmit} id="new-patient-form">
@@ -20,6 +31,7 @@ function NewPatientForm(){
       <input type="text" name='name' placeholder="" required/>
       <label htmlFor="">Nombre completo</label>
     </div>
+    {error && <p role="alert">{error}</p>}
   </form>
 }
 
@@ -70,9 +82,9 @@ function Home() {
       <Modal isOpen={isPatientOpen}
         onClose={() => setIsPatientOpen(false)}
         title="Nuevo paciente"
-        footer={<button className="btn" form="new-patient-form" onClick={() => console.log("Acción del modal")}>Guardar</button>}
+        footer={<button className="btn" type="submit" form="new-patient-form">Guardar</button>}
       >
-        <NewPatientForm/>
+        <NewPatientForm onSaved={() => setIsPatientOpen(false)}/>
       </Modal>
     </>
   );
