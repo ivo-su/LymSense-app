@@ -22,7 +22,13 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || "No se pudo completar la solicitud");
+    const detail = Array.isArray(error.detail)
+      ? error.detail.map((item) => {
+          const location = item.loc?.at(-1);
+          return location ? `${location}: ${item.msg}` : item.msg;
+        }).join("; ")
+      : error.detail;
+    throw new Error(detail || "No se pudo completar la solicitud");
   }
 
   return response.status === 204 ? null : response.json();
@@ -61,4 +67,8 @@ export function getLogs() {
 
 export function deleteLog(logId) {
   return request(`/logs/${logId}`, { method: "DELETE" });
+}
+
+export function setLogReference(logId) {
+  return request(`/logs/${logId}/reference`, { method: "PATCH" });
 }

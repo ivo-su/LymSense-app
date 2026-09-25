@@ -193,10 +193,17 @@ nav.main-nav {
   top: 0;
   display: flex;
   justify-content: space-between;
-  padding: 1em 2em;
+  padding: .5em 2em;
   width: 100%;
   box-sizing: border-box;
   max-width: 100%;
+  background-color: #ffffffa8;
+  /* border-radius: 8px; */
+  border: 1px solid #fff;
+  /* padding: 1em 1.5em; */
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.2);
+  z-index: 10;
   /* box-shadow: 0 0 2px 0 rgba(0, 0, 0, 0.2); */
 }
 
@@ -260,6 +267,14 @@ a.btn,
   display: flex;
   align-items: center;
   gap: .5em;
+}
+
+button.btn.bare,
+.custom-select.bare .trigger{
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
 }
 
 button, a {

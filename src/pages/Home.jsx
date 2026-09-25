@@ -17,14 +17,21 @@ function NewLogForm({ patients, onSaved, onPatientsReload }) {
     const form = event.currentTarget;
     const file = form.elements.file.files[0];
     const patientId = form.elements.patient_id.value;
+    const healthyInput = form.elements.z_healthy.value.trim();
+    const riskInput = form.elements.z_risk.value.trim();
 
     if (!patientId) {
       setError("Selecciona el paciente al que pertenece el registro.");
       return;
     }
 
-    if (!file) {
-      setError("Selecciona el archivo generado por el dispositivo.");
+    if (!file && (!healthyInput || !riskInput)) {
+      setError("Selecciona un archivo o completa z_healthy y z_risk.");
+      return;
+    }
+
+    if ((healthyInput && !riskInput) || (!healthyInput && riskInput)) {
+      setError("Completa ambas mediciones manuales.");
       return;
     }
 
@@ -35,28 +42,40 @@ function NewLogForm({ patients, onSaved, onPatientsReload }) {
         throw new Error("El paciente seleccionado ya no existe. Selecciona otro paciente.");
       }
 
-      const rawContent = await file.text();
-      let parsedContent;
+      let zHealthy;
+      let zRisk;
+      let filename = "manual-entry.json";
 
-      try {
-        parsedContent = JSON.parse(rawContent);
-      } catch {
-        throw new Error("El archivo no contiene un documento JSON válido.");
+      if (healthyInput && riskInput) {
+        zHealthy = Number(healthyInput.replace(",", "."));
+        zRisk = Number(riskInput.replace(",", "."));
+      } else {
+        let parsedContent;
+        try {
+          parsedContent = JSON.parse(await file.text());
+        } catch {
+          throw new Error("El archivo no contiene un documento JSON válido.");
+        }
+        zHealthy = Number(parsedContent?.z_healthy);
+        zRisk = Number(String(parsedContent?.z_risk ?? "").replace(",", "."));
+        filename = file.name;
       }
-
-      const lDex = parsedContent?.lDex;
-      if (typeof lDex !== "number" || !Number.isFinite(lDex)) {
-        throw new Error("El archivo debe contener un valor numérico lDex.");
+      if (!Number.isFinite(zHealthy) || !Number.isFinite(zRisk)) {
+        throw new Error("El archivo debe contener z_healthy y z_risk numéricos.");
+      }
+      if (zRisk === 0) {
+        throw new Error("La medición z_risk no puede ser cero.");
       }
 
       await createLog({
         patient_id: Number(patientId),
-        filename: file.name,
-        ldex: lDex,
+        filename,
+        z_healthy: zHealthy,
+        z_risk: zRisk,
       });
       
       form.reset();
-      onSaved();
+      onSaved(patientId);
     } catch (submitError) {
       setError(submitError.message);
     } finally {
@@ -79,8 +98,16 @@ function NewLogForm({ patients, onSaved, onPatientsReload }) {
       <label htmlFor="patient_id">Paciente</label>
     </div>
     <div className="input-container">
-      <input type="file" name="file" accept=".json,application/json" required />
+      <input type="file" name="file" accept=".json,application/json" id="file"/>
       <label htmlFor="file">Archivo del dispositivo</label>
+    </div>
+    <div className="input-container">
+      <input type="text" name="z_healthy" placeholder=" " inputMode="decimal" id="z_healthy"/>
+      <label htmlFor="z_healthy">z_healthy (manual)</label>
+    </div>
+    <div className="input-container">
+      <input type="text" name="z_risk" placeholder=" " inputMode="decimal" id="z_risk"/>
+      <label htmlFor="z_risk">z_risk (manual)</label>
     </div>
     {patients.length === 0 && <p>No hay pacientes disponibles para asociar el registro.</p>}
     {error && <p role="alert">{error}</p>}
@@ -90,7 +117,6 @@ function NewLogForm({ patients, onSaved, onPatientsReload }) {
 
 function NewPatientForm({ onSaved }){
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -99,10 +125,9 @@ function NewPatientForm({ onSaved }){
     const formData = new FormData(form);
 
     try {
-      await createPatient(Object.fromEntries(formData.entries()));
+      const newPatient = await createPatient(Object.fromEntries(formData.entries()));
       form.reset();
-      onSaved();
-      navigate("/patients");
+      onSaved(newPatient.id);
     } catch (submitError) {
       setError(submitError.message);
     }
@@ -110,8 +135,8 @@ function NewPatientForm({ onSaved }){
 
   return <form className="col" onSubmit={handleSubmit} id="new-patient-form">
     <div className="input-container">
-      <input type="text" name='name' placeholder="" required/>
-      <label htmlFor="">Nombre completo</label>
+      <input type="text" name='name' placeholder="" id="new-patient-name" required/>
+      <label htmlFor="new-patient-name">Nombre completo</label>
     </div>
     {error && <p role="alert">{error}</p>}
   </form>
@@ -124,6 +149,7 @@ function Home() {
   const [recentLogs, setRecentLogs] = useState([]);
   const [nextPatients, setNextPatients] = useState([]);
   const [patientsError, setPatientsError] = useState("");
+  const navigate = useNavigate()
 
   useEffect(() => {
     Promise.all([getPatients(), getLogs()])
@@ -179,14 +205,14 @@ function Home() {
           <h3>Últimos registros</h3>
           <div className="box log-list">
             {!patientsError && recentLogs.length === 0 && <p>No hay registros guardados.</p>}
-            {recentLogs.map((log) => <LogItem key={log.id} log={log} />)}
+            {recentLogs.slice(0, 5).map((log) => <LogItem key={log.id} log={log} />)}
           </div>
         </div>
         <div style={{display: 'flex', flexDirection:'column', justifyContent: 'start', alignItems: 'stretch', gap: "1em", flex: 1}}>
           <h3 style={{ textAlign: 'start'}}>Próximos pacientes</h3>
           <div className="box log-list">
             {!patientsError && nextPatients.length === 0 && <p>No hay pacientes guardados.</p>}
-            {nextPatients.map((patient) => <PatientItem key={patient.id} patient={patient} />)}
+            {nextPatients.slice(0, 5).map((patient) => <PatientItem key={patient.id} patient={patient} />)}
           </div>
         </div>
         
@@ -200,7 +226,7 @@ function Home() {
       >
         <NewLogForm
           patients={patients}
-          onSaved={() => setIsLogOpen(false)}
+          onSaved={(patientId) => navigate(`/patients/${patientId}`)}
           onPatientsReload={async () => {
             const refreshedPatients = await getPatients();
             setPatients(refreshedPatients);
@@ -215,7 +241,7 @@ function Home() {
         title="Nuevo paciente"
         footer={<button className="btn" type="submit" form="new-patient-form">Guardar</button>}
       >
-        <NewPatientForm onSaved={() => setIsPatientOpen(false)}/>
+        <NewPatientForm onSaved={(newPatientId) => navigate(`/patients/${newPatientId}`)}/>
       </Modal>
     </>
   );

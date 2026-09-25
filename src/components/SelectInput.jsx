@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LuArrowDown } from 'react-icons/lu';
 
-function SelectInput({ options = [], value, defaultValue, onChange, placeholder = 'Select an option', disabled = false, name, }) {
+function SelectInput({ options = [], value, defaultValue, onChange, placeholder = 'Select an option', disabled = false, name, className}) {
 	const [open, setOpen] = useState(false);
 	const [internalValue, setInternalValue] = useState(defaultValue);
 	const containerRef = useRef(null);
@@ -42,7 +42,7 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 	};
 
 	return (
-		<div ref={containerRef} style={styles.container} className='custom-select'>
+		<div ref={containerRef} style={styles.container} className={`custom-select ${className}`}>
 			{name && <input type="hidden" name={name} value={selectedValue ?? ''} />}
 			<button
 				className='trigger'
@@ -90,7 +90,7 @@ const styles = {
 	trigger: {
 		alignItems: 'center',
 		boxSizing: 'border-box', cursor: 'pointer', display: 'flex', font: 'inherit', justifyContent: 'space-between',
-		minHeight: 42, textAlign: 'left', width: '100%',
+		minHeight: 0, textAlign: 'left', width: '100%',
 	},
 	placeholder: { color: '#64748b' },
 	value: { color: '#0f172a' },

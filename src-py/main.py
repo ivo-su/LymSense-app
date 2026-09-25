@@ -53,6 +53,9 @@ def initialize_database():
                 filename TEXT NOT NULL,
                 content TEXT,
                 ldex REAL,
+                z_healthy REAL,
+                z_risk REAL,
+                reference INTEGER NOT NULL DEFAULT 0,
                 imported_at TEXT NOT NULL,
                 FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
             )
@@ -63,6 +66,13 @@ def initialize_database():
         }
         if "ldex" not in columns:
             connection.execute("ALTER TABLE logs ADD COLUMN ldex REAL")
+        if "z_healthy" not in columns:
+            connection.execute("ALTER TABLE logs ADD COLUMN z_healthy REAL")
+        if "z_risk" not in columns:
+            connection.execute("ALTER TABLE logs ADD COLUMN z_risk REAL")
+        if "reference" not in columns:
+            connection.execute("ALTER TABLE logs ADD COLUMN reference INTEGER NOT NULL DEFAULT 0")
+        connection.execute("UPDATE logs SET reference = 0 WHERE z_risk IS NULL")
 
 
 def patient_from_row(row):
@@ -73,6 +83,8 @@ def patient_from_row(row):
         "logs": [],
         "created_at": row["created_at"],
         "last_log_at": row["last_log_at"] if "last_log_at" in row.keys() else None,
+        "log_count": row["log_count"] if "log_count" in row.keys() else 0,
+        "latest_ldex": row["latest_ldex"] if "latest_ldex" in row.keys() else None,
     }
 
 
@@ -88,7 +100,15 @@ def list_patients(search: str = Query(default="", max_length=200)):
     with get_connection() as connection:
         rows = connection.execute(
             """
-            SELECT patients.*, MAX(logs.imported_at) AS last_log_at
+                 SELECT patients.*, MAX(logs.imported_at) AS last_log_at,
+                     COUNT(logs.id) AS log_count,
+                     (
+                         SELECT latest_log.ldex
+                         FROM logs AS latest_log
+                         WHERE latest_log.patient_id = patients.id
+                         ORDER BY latest_log.imported_at DESC, latest_log.id DESC
+                         LIMIT 1
+                     ) AS latest_ldex
             FROM patients
             LEFT JOIN logs ON logs.patient_id = patients.id
             WHERE patients.name LIKE ? COLLATE NOCASE
@@ -105,7 +125,15 @@ def get_patient(patient_id: int):
     with get_connection() as connection:
         patient = connection.execute(
             """
-            SELECT patients.*, MAX(logs.imported_at) AS last_log_at
+                 SELECT patients.*, MAX(logs.imported_at) AS last_log_at,
+                     COUNT(logs.id) AS log_count,
+                     (
+                         SELECT latest_log.ldex
+                         FROM logs AS latest_log
+                         WHERE latest_log.patient_id = patients.id
+                         ORDER BY latest_log.imported_at DESC, latest_log.id DESC
+                         LIMIT 1
+                     ) AS latest_ldex
             FROM patients
             LEFT JOIN logs ON logs.patient_id = patients.id
             WHERE patients.id = ?
@@ -118,11 +146,11 @@ def get_patient(patient_id: int):
 
         logs = connection.execute(
             """
-            SELECT id, patient_id, filename, ldex, imported_at,
+            SELECT id, patient_id, filename, ldex, z_healthy, z_risk, reference, imported_at,
                    log_number, total_logs
             FROM (
-                SELECT logs.id, logs.patient_id, logs.filename, logs.ldex,
-                       logs.imported_at,
+                  SELECT logs.id, logs.patient_id, logs.filename, logs.ldex,
+                      logs.z_healthy, logs.z_risk, logs.reference, logs.imported_at,
                        ROW_NUMBER() OVER (
                            PARTITION BY logs.patient_id
                            ORDER BY logs.imported_at ASC, logs.id ASC
@@ -164,13 +192,18 @@ def create_patient(patient: PatientCreate):
 class LogCreate(BaseModel):
     patient_id: int
     filename: str = Field(min_length=1, max_length=255)
-    ldex: float
+    z_healthy: float
+    z_risk: float
 
 
 @app.post("/logs", status_code=201)
 def create_log(log: LogCreate):
-    if not math.isfinite(log.ldex):
-        raise HTTPException(status_code=422, detail="lDex debe ser un número válido")
+    if not math.isfinite(log.z_healthy) or not math.isfinite(log.z_risk):
+        raise HTTPException(status_code=422, detail="Las mediciones deben ser números válidos")
+    if log.z_risk == 0:
+        raise HTTPException(status_code=422, detail="La medición de riesgo no puede ser cero")
+
+    ldex = log.z_healthy / log.z_risk
 
     imported_at = datetime.now(timezone.utc).isoformat()
     with get_connection() as connection:
@@ -182,17 +215,28 @@ def create_log(log: LogCreate):
 
         cursor = connection.execute(
             """
-            INSERT INTO logs (patient_id, filename, content, ldex, imported_at)
-            VALUES (?, ?, '', ?, ?)
+            INSERT INTO logs (
+                patient_id, filename, content, ldex, z_healthy, z_risk, imported_at
+            )
+            VALUES (?, ?, '', ?, ?, ?, ?)
             """,
-            (log.patient_id, log.filename.strip(), log.ldex, imported_at),
+            (
+                log.patient_id,
+                log.filename.strip(),
+                ldex,
+                log.z_healthy,
+                log.z_risk,
+                imported_at,
+            ),
         )
 
     return {
         "id": cursor.lastrowid,
         "patient_id": log.patient_id,
         "filename": log.filename.strip(),
-        "ldex": log.ldex,
+        "ldex": ldex,
+        "z_healthy": log.z_healthy,
+        "z_risk": log.z_risk,
         "imported_at": imported_at,
     }
 
@@ -202,11 +246,11 @@ def list_logs():
     with get_connection() as connection:
         rows = connection.execute(
             """
-            SELECT id, patient_id, patient_name, filename, ldex, imported_at,
+            SELECT id, patient_id, patient_name, filename, ldex, z_healthy, z_risk, reference, imported_at,
                    log_number, total_logs
             FROM (
                 SELECT logs.id, logs.patient_id, patients.name AS patient_name,
-                       logs.filename, logs.ldex, logs.imported_at,
+                       logs.filename, logs.ldex, logs.z_healthy, logs.z_risk, logs.reference, logs.imported_at,
                        ROW_NUMBER() OVER (
                            PARTITION BY logs.patient_id
                            ORDER BY logs.imported_at ASC, logs.id ASC
@@ -224,6 +268,31 @@ def list_logs():
     return [dict(row) for row in rows]
 
 
+@app.patch("/logs/{log_id}/reference")
+def set_log_reference(log_id: int):
+    with get_connection() as connection:
+        log = connection.execute(
+            "SELECT patient_id, z_risk FROM logs WHERE id = ?", (log_id,)
+        ).fetchone()
+        if log is None:
+            raise HTTPException(status_code=404, detail="Registro no encontrado")
+        if log["z_risk"] is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Este registro no tiene z_risk y no puede ser referencia",
+            )
+
+        connection.execute(
+            "UPDATE logs SET reference = 0 WHERE patient_id = ?", (log["patient_id"],)
+        )
+        connection.execute("UPDATE logs SET reference = 1 WHERE id = ?", (log_id,))
+        row = connection.execute(
+            "SELECT id, patient_id, reference FROM logs WHERE id = ?", (log_id,)
+        ).fetchone()
+
+    return dict(row)
+
+
 @app.delete("/logs/{log_id}", status_code=204)
 def delete_log(log_id: int):
     with get_connection() as connection:
@@ -235,9 +304,14 @@ def delete_log(log_id: int):
 @app.delete("/patients/{patient_id}", status_code=204)
 def delete_patient(patient_id: int):
     with get_connection() as connection:
+        patient = connection.execute(
+            "SELECT id FROM patients WHERE id = ?", (patient_id,)
+        ).fetchone()
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        connection.execute("DELETE FROM logs WHERE patient_id = ?", (patient_id,))
         result = connection.execute("DELETE FROM patients WHERE id = ?", (patient_id,))
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Paciente no encontrado")
 
 if __name__ == "__main__":
     # Esto mantiene el servidor corriendo en http://127.0.0.1:8000

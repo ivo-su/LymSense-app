@@ -9,6 +9,7 @@ import Nav from "./components/Nav";
 import Patients from "./pages/Patients";
 import Logs from "./pages/Logs";
 import Patient from "./pages/Patient";
+import BackButton from "./components/BackButton";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
@@ -32,8 +33,8 @@ function App() {
             </>
           }>
             <Route index element={<Home/>} />
-            <Route path="/about" element={<h1>About</h1>} />
-            <Route path="/contact" element={<h1>Contact</h1>} />
+            <Route path="/about" element={<div className="box page-title"><BackButton /><h1>About</h1></div>} />
+            <Route path="/contact" element={<div className="box page-title"><BackButton /><h1>Contact</h1></div>} />
             <Route path="/logs" element={<Logs/>} />
             <Route path="/patients" element={<Patients/>} />
             <Route path="/patients/:id" element={<Patient/>} />

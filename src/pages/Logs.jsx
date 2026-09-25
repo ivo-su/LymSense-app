@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import SelectInput from "../components/SelectInput";
 import LogItem from "../components/LogItem";
 import Modal from "../components/Modal";
+import BackButton from "../components/BackButton";
 import { deleteLog, getLogs } from "../api";
 
 function Logs(){
@@ -9,6 +10,7 @@ function Logs(){
   const [error, setError] = useState("");
   const [logToDelete, setLogToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState("date");
 
   useEffect(() => {
     getLogs().then(setLogs).catch((loadError) => setError(loadError.message));
@@ -30,8 +32,21 @@ function Logs(){
     }
   };
 
+  const sortedLogs = [...logs].sort((firstLog, secondLog) => {
+    if (sortBy === "patient") {
+      return firstLog.patient_name.localeCompare(secondLog.patient_name);
+    }
+
+    if (sortBy === "ldex") {
+      return secondLog.ldex - firstLog.ldex;
+    }
+
+    return new Date(secondLog.imported_at) - new Date(firstLog.imported_at);
+  });
+
   return (<>
     <div className="box toolbar" style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
+      <BackButton />
       <h1>Registros</h1>
       <span style={{margin:"0 0 0 auto"}}>Ordenar por:</span>
       <div style={{width: "150px"}}>
@@ -39,13 +54,13 @@ function Logs(){
           { value: 'date', label: 'Fecha' },
           { value: 'patient', label: 'Paciente' },
           { value: 'ldex', label: 'L-dex' }
-        ]} defaultValue="date" />
+        ]} value={sortBy} onChange={setSortBy} className='bare'/>
       </div>
     </div>
     <div className='box log-list'>
     {error && <p role="alert">{error}</p>}
     {!error && logs.length === 0 && <p>No hay registros guardados.</p>}
-    {logs.map((log) => <LogItem key={log.id} log={log} onDelete={setLogToDelete} />)}
+    {sortedLogs.map((log) => <LogItem key={log.id} log={log} onDelete={setLogToDelete} />)}
     </div>
     <Modal
       isOpen={Boolean(logToDelete)}
