@@ -78,11 +78,11 @@ function NewLogForm({ patientId, onSaved }) {
     </div>
     <div className="input-container">
       <input type="text" name="z_healthy" placeholder=" " inputMode="decimal" id='z_healthy'/>
-      <label htmlFor="z_healthy">z_healthy (manual)</label>
+      <label htmlFor="z_healthy">z_healthy (ingreso manual)</label>
     </div>
     <div className="input-container">
       <input type="text" name="z_risk" placeholder=" " inputMode="decimal" id='z_risk'/>
-      <label htmlFor="z_risk">z_risk (manual)</label>
+      <label htmlFor="z_risk">z_risk (ingreso manual)</label>
     </div>
     {error && <p role="alert">{error}</p>}
     {isSaving && <p>Guardando registro...</p>}
@@ -147,7 +147,7 @@ function Patient(){
       <h3>Información</h3>
       <span>Nombre: {patient.name}</span>
       <span>Registros: {patient.logs.length}</span>
-      <span>Último registro: {latestLog ? new Date(latestLog.imported_at).toLocaleDateString() : 'Sin registros'}</span>
+      <span>Último registro: {latestLog ? new Date(latestLog.imported_at).toLocaleDateString("es-AR") : 'Sin registros'}</span>
     </div>
     <div className="box" style={{flex: 1}}>
       <h3>Gráfico de L-ratio</h3>

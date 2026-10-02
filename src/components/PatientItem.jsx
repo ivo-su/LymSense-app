@@ -7,7 +7,7 @@ function formatLdex(value) {
 
 function PatientItem({ patient, onDelete }){
   const patientId = patient?.id ?? 1;
-  const patientName = patient?.name ?? "John Doe";
+  const patientName = patient?.name ?? "Paciente sin nombre";
   const latestLdex = patient?.latest_ldex;
   const logCount = patient?.log_count ?? patient?.logs?.length ?? 0;
   const timeSinceLastLog = getTimeSinceLastLog(patient?.last_log_at);
@@ -35,7 +35,7 @@ function PatientItem({ patient, onDelete }){
         <LuUser size={24} />
       </div>
       <div style={{margin: "0 0 0 1em", display: 'flex', flexDirection: 'column', gap: "0.0em", justifyContent: 'center', alignItems: 'start'}}>
-        <Link to={`/patients/${patientId}`} style={{fontWeight: '500'}}>{patientName}</Link>
+        <Link to={`/patients/${patientId}`} style={{fontWeight: '500', textAlign: 'left'}}>{patientName}</Link>
       </div>
       <div style={{ margin: "0 0 0 auto", display: 'flex', flexDirection: 'row', gap: ".5em", justifyContent: 'center', alignItems: 'center'}}>
         <div className="icon-container">

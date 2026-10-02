@@ -18,7 +18,7 @@ applaunchservices @ file:///Users/cbousseau/work/recipes/ci_py311/applaunchservi
 appnope @ file:///Users/cbousseau/work/recipes/ci_py311/appnope_1677917710869/work
 appscript @ file:///Users/cbousseau/work/recipes/ci_py311/appscript_1677956964648/work
 archspec @ file:///croot/archspec_1709217642129/work
-argon2-cffi @ file:///opt/conda/conda-bld/argon2-cffi_1645000214183/work
+argon2-cffi==23.1.0
 argon2-cffi-bindings @ file:///Users/cbousseau/work/recipes/ci_py311/argon2-cffi-bindings_1677915727169/work
 arrow @ file:///Users/cbousseau/work/recipes/ci_py311/arrow_1677931434012/work
 asgiref==3.8.1

@@ -13,12 +13,12 @@ function PassInput(props){
         placeholder=" "
         {...props}
       />
-      <label htmlFor="password">Password</label>
+      <label htmlFor="password">Contraseña</label>
       <p onClick={() => {
           setPeek(!peek)
         }
       }>
-        {peek ? "Hide" : "Show"}
+        {peek ? "Ocultar" : "Mostrar"}
       </p>
     </div>
   );

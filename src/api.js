@@ -1,14 +1,46 @@
 const API_URL = "http://127.0.0.1:8000";
+const AUTH_TOKEN_KEY = "lymsense_session_token";
+
+function getStoredToken() {
+  return window.localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+function setStoredToken(token) {
+  if (token) {
+    window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } else {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
+}
+
+export function mergeRequestHeaders(baseHeaders = {}, token = getStoredToken()) {
+  const mergedHeaders = { ...baseHeaders };
+  if (!token) return mergedHeaders;
+
+  return {
+    ...mergedHeaders,
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function buildAuthHeaders(headers = {}) {
+  return mergeRequestHeaders(headers, getStoredToken());
+}
 
 async function request(path, options = {}) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 5000);
+  const { headers: extraHeaders, ...requestOptions } = options;
 
   let response;
   try {
     response = await fetch(`${API_URL}${path}`, {
-      headers: { "Content-Type": "application/json", ...options.headers },
-      ...options,
+      credentials: "include",
+      ...requestOptions,
+      headers: mergeRequestHeaders(
+        { "Content-Type": "application/json", ...(extraHeaders || {}) },
+        getStoredToken(),
+      ),
       signal: controller.signal,
     });
   } catch (error) {
@@ -20,18 +52,87 @@ async function request(path, options = {}) {
     window.clearTimeout(timeout);
   }
 
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const payload = isJson ? await response.json().catch(() => ({})) : null;
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    const detail = Array.isArray(error.detail)
-      ? error.detail.map((item) => {
+    const detail = Array.isArray(payload.detail)
+      ? payload.detail.map((item) => {
           const location = item.loc?.at(-1);
           return location ? `${location}: ${item.msg}` : item.msg;
         }).join("; ")
-      : error.detail;
+      : payload.detail;
     throw new Error(detail || "No se pudo completar la solicitud");
   }
 
-  return response.status === 204 ? null : response.json();
+  return response.status === 204 || payload === null ? null : payload;
+}
+
+export function signUp(userPayload) {
+  return request("/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(userPayload),
+  }).then((result) => {
+    if (result?.token) setStoredToken(result.token);
+    return result;
+  });
+}
+
+export function signIn(userPayload) {
+  return request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(userPayload),
+  }).then((result) => {
+    if (result?.token) setStoredToken(result.token);
+    return result;
+  });
+}
+
+export function getCurrentUser() {
+  const token = getStoredToken();
+  if (token) {
+    return request("/auth/me");
+  }
+  return request("/auth/me");
+}
+
+export function logoutUser() {
+  setStoredToken(null);
+  return request("/auth/logout", { method: "POST" });
+}
+
+export function getUsers() {
+  return request("/admin/users");
+}
+
+export function createManagedUser(user) {
+  return request("/admin/users", {
+    method: "POST",
+    body: JSON.stringify(user),
+  });
+}
+
+export function updateManagedUserStatus(userId, isActive) {
+  return request(`/admin/users/${userId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_active: isActive }),
+  });
+}
+
+export function deleteManagedUser(userId) {
+  return request(`/admin/users/${userId}`, { method: "DELETE" });
+}
+
+export function getAccountProfile() {
+  return request("/account/profile");
+}
+
+export function updateAccountProfile(profile) {
+  return request("/account/profile", {
+    method: "PATCH",
+    body: JSON.stringify(profile),
+  });
 }
 
 export function getPatients(search = "") {

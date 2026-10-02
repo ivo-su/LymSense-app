@@ -9,7 +9,7 @@ function LogItem({ log, onDelete, onReference }){
   const patientId = log?.patient_id ?? 1;
   const patientName = log?.patient_name ?? "Paciente desconocido";
   const importedDate = log?.imported_at
-    ? new Date(log.imported_at).toLocaleDateString()
+    ? new Date(log.imported_at).toLocaleDateString("es-AR")
     : "Sin fecha";
 
   return <>
@@ -18,7 +18,7 @@ function LogItem({ log, onDelete, onReference }){
         <LuFileCheck size={24} />
       </div>
       <div style={{margin: "0 0 0 .5em", display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'start'}}>
-        <Link to={`/patients/${patientId}`} style={{fontWeight: '500'}}>{patientName}</Link>
+        <Link to={`/patients/${patientId}`} style={{fontWeight: '500', textAlign: 'left'}}>{patientName}</Link>
         <span style={{ fontSize: '0.9em', color: '#666' }}>{importedDate}</span>
       </div>
       <div style={{ margin: "0 0 0 auto", display: 'flex', flexDirection: 'row', gap: ".25em", justifyContent: 'center', alignItems: 'center'}}>

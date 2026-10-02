@@ -124,7 +124,7 @@ const Modal = ({
         className={`modal-panel ${className}`.trim()}
         role="dialog"
         aria-modal="true"
-        aria-label={ariaLabel || title || 'Dialog'}
+        aria-label={ariaLabel || title || 'Diálogo'}
         style={{
           ...modalStyles.modal,
           maxWidth: modalWidth,
@@ -138,7 +138,7 @@ const Modal = ({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close modal"
+                aria-label="Cerrar ventana"
                 style={modalStyles.closeButton}
               >
                 ×

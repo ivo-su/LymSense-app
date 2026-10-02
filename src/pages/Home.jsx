@@ -103,11 +103,11 @@ function NewLogForm({ patients, onSaved, onPatientsReload }) {
     </div>
     <div className="input-container">
       <input type="text" name="z_healthy" placeholder=" " inputMode="decimal" id="z_healthy"/>
-      <label htmlFor="z_healthy">z_healthy (manual)</label>
+      <label htmlFor="z_healthy">z_healthy (ingreso manual)</label>
     </div>
     <div className="input-container">
       <input type="text" name="z_risk" placeholder=" " inputMode="decimal" id="z_risk"/>
-      <label htmlFor="z_risk">z_risk (manual)</label>
+      <label htmlFor="z_risk">z_risk (ingreso manual)</label>
     </div>
     {patients.length === 0 && <p>No hay pacientes disponibles para asociar el registro.</p>}
     {error && <p role="alert">{error}</p>}
@@ -191,7 +191,7 @@ function Home() {
     <>
       <div className="box" style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
         <h1>Bienvenido!</h1>
-        <span style={{ margin: "0 0 0 auto", fontSize: '0.9em', color: '#666', display: 'flex', alignItems: 'center', gap: "0.5em" }}><LuTriangleAlert size={20} /> El dispositivo está offline</span>
+        <span style={{ margin: "0 0 0 auto", fontSize: '0.9em', color: '#666', display: 'flex', alignItems: 'center', gap: "0.5em" }}><LuTriangleAlert size={20} /> El dispositivo está sin conexión</span>
       </div>
       <div style={{ display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
         <button className="btn" onClick={openLogModal}><LuCirclePlus /> Nuevo registro</button>
