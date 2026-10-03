@@ -159,7 +159,7 @@ function Patient(){
       <span>Nombre: {patient.name}</span>
       <span>Sexo: {sexLabels[patient.gender] || "No especificado"}</span>
       {/* <span>Fecha de nacimiento o edad: {birthOrAge}</span> */}
-      <span>ID interno: {patient.id}</span>
+      {/* <span>ID interno: {patient.id}</span> */}
       {patient.external_id && <span>N.º de historia clínica: {patient.external_id}</span>}
       <span>Miembro afectado: {affectedLimb}</span>
       {/* {patient.comments && <span>Comentarios: {patient.comments}</span>} */}

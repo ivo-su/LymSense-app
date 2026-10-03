@@ -780,14 +780,14 @@ form.col{
   }
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
   .graph-container{
   /* height: 200px; */
     width: 400px;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .graph-container{
     height: 300px;
   }
