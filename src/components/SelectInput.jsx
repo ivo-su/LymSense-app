@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LuArrowDown } from 'react-icons/lu';
 
-function SelectInput({ options = [], value, defaultValue, onChange, placeholder = 'Selecciona una opción', disabled = false, name, className}) {
+function SelectInput({ options = [], value, defaultValue, onChange, placeholder = 'Selecciona una opción', disabled = false, name, className, ariaLabel}) {
 	const [open, setOpen] = useState(false);
 	const [internalValue, setInternalValue] = useState(defaultValue);
 	const containerRef = useRef(null);
@@ -48,7 +48,7 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 				className='trigger'
 				type="button"
 				aria-haspopup="listbox"
-				aria-label={selectedOption?.label ?? placeholder}
+				aria-label={ariaLabel || selectedOption?.label || placeholder}
 				aria-expanded={open}
 				disabled={disabled}
 				onClick={() => setOpen((isOpen) => !isOpen)}
@@ -62,7 +62,7 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 			</button>
 
 			{open && (
-				<div role="listbox" aria-label={selectedOption?.label ?? placeholder} style={styles.menu}>
+				<div role="listbox" aria-label={ariaLabel || selectedOption?.label || placeholder} style={styles.menu}>
 					{options.map((option) => (
 						<button
 							type="button"

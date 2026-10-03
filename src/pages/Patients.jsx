@@ -1,38 +1,12 @@
 import { useEffect, useState } from "react";
 import { LuCirclePlus, LuSearch } from "react-icons/lu";
 import SelectInput from "../components/SelectInput";
+import NewPatientForm from "../components/NewPatientForm";
 import PatientItem from "../components/PatientItem";
 import Modal from "../components/Modal";
 import BackButton from "../components/BackButton";
-import { createPatient, deletePatient, getPatients } from "../api";
+import { deletePatient, getPatients } from "../api";
 import { useNavigate } from "react-router";
-
-function NewPatientForm({ onSaved }) {
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError("");
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    try {
-      const newPatient = await createPatient(Object.fromEntries(formData.entries()));
-      form.reset();
-      onSaved(newPatient.id);
-    } catch (submitError) {
-      setError(submitError.message);
-    }
-  };
-
-  return <form className="col" onSubmit={handleSubmit} id="new-patient-form">
-    <div className="input-container">
-      <input type="text" name="name" placeholder="" required id="new-patient-name"/>
-      <label htmlFor="new-patient-name">Nombre completo</label>
-    </div>
-    {error && <p role="alert">{error}</p>}
-  </form>;
-}
 
 function Patients(){
   const [patients, setPatients] = useState([]);
@@ -144,7 +118,7 @@ function Patients(){
       isOpen={isPatientOpen}
       onClose={() => setIsPatientOpen(false)}
       title="Nuevo paciente"
-      footer={<button className="btn" type="submit" form="new-patient-form">Guardar</button>}
+      className="patient-create-modal"
     >
       <NewPatientForm
         onSaved={(newPatientId) => navigate(`/patients/${newPatientId}`)}

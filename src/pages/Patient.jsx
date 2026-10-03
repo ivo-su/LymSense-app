@@ -130,6 +130,17 @@ function Patient(){
 
   const latestLog = patient.logs.at(-1);
   const referenceLog = patient.logs.find((log) => log.reference);
+  const birthOrAge = patient.date_of_birth
+    ? new Date(`${patient.date_of_birth}T00:00:00`).toLocaleDateString("es-AR")
+    : patient.age_years != null ? `${patient.age_years} años` : "Sin datos";
+  const sexLabels = {
+    female: "Femenino",
+    male: "Masculino",
+    unspecified: "No especificado",
+  };
+  const affectedLimb = patient.affected_side && patient.affected_region
+    ? `${patient.affected_side === "right" ? "Derecho" : "Izquierdo"} ${patient.affected_region === "arm" ? "brazo" : "pierna"}`
+    : "Sin datos";
 
   return (<>
     <div className="box" style={{ display: "flex", justifyContent:"start", alignItems: "center", gap: "1em" }}>
@@ -146,6 +157,12 @@ function Patient(){
     <div className='box patient-info'>
       <h3>Información</h3>
       <span>Nombre: {patient.name}</span>
+      <span>Sexo: {sexLabels[patient.gender] || "No especificado"}</span>
+      {/* <span>Fecha de nacimiento o edad: {birthOrAge}</span> */}
+      <span>ID interno: {patient.id}</span>
+      {patient.external_id && <span>N.º de historia clínica: {patient.external_id}</span>}
+      <span>Miembro afectado: {affectedLimb}</span>
+      {/* {patient.comments && <span>Comentarios: {patient.comments}</span>} */}
       <span>Registros: {patient.logs.length}</span>
       <span>Último registro: {latestLog ? new Date(latestLog.imported_at).toLocaleDateString("es-AR") : 'Sin registros'}</span>
     </div>
@@ -171,6 +188,7 @@ function Patient(){
       isOpen={isLogOpen}
       onClose={() => setIsLogOpen(false)}
       title={`Nuevo registro para ${patient.name}`}
+      className="patient-create-modal"
       footer={<button className="btn" type="submit" form="patient-new-log-form">Guardar</button>}
     >
       <NewLogForm

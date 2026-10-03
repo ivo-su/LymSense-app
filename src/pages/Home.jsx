@@ -1,11 +1,12 @@
 import { LuCirclePlus, LuList, LuTriangleAlert, LuUserPlus, LuUsers } from "react-icons/lu";
 import { useEffect, useState } from "react";
 import Modal from "../components/Modal";
+import NewPatientForm from "../components/NewPatientForm";
 import { Link, useNavigate } from "react-router";
 import LogItem from "../components/LogItem";
 import PatientItem from "../components/PatientItem";
 import SelectInput from "../components/SelectInput";
-import { createLog, createPatient, getLogs, getPatients } from "../api";
+import { createLog, getLogs, getPatients } from "../api";
 
 function NewLogForm({ patients, onSaved, onPatientsReload }) {
   const [error, setError] = useState("");
@@ -115,33 +116,6 @@ function NewLogForm({ patients, onSaved, onPatientsReload }) {
   </form>;
 }
 
-function NewPatientForm({ onSaved }){
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-
-    try {
-      const newPatient = await createPatient(Object.fromEntries(formData.entries()));
-      form.reset();
-      onSaved(newPatient.id);
-    } catch (submitError) {
-      setError(submitError.message);
-    }
-  }
-
-  return <form className="col" onSubmit={handleSubmit} id="new-patient-form">
-    <div className="input-container">
-      <input type="text" name='name' placeholder="" id="new-patient-name" required/>
-      <label htmlFor="new-patient-name">Nombre completo</label>
-    </div>
-    {error && <p role="alert">{error}</p>}
-  </form>
-}
-
 function Home() {
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [isPatientOpen, setIsPatientOpen] = useState(false);
@@ -239,7 +213,8 @@ function Home() {
       <Modal isOpen={isPatientOpen}
         onClose={() => setIsPatientOpen(false)}
         title="Nuevo paciente"
-        footer={<button className="btn" type="submit" form="new-patient-form">Guardar</button>}
+        className="patient-create-modal"
+        size="xl"
       >
         <NewPatientForm onSaved={(newPatientId) => navigate(`/patients/${newPatientId}`)}/>
       </Modal>

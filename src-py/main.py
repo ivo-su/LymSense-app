@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import hashlib
 import math
@@ -32,7 +32,12 @@ password_hasher = PasswordHasher()
 
 class PatientCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    gender: str | None = Field(default=None, max_length=20)
+    gender: Literal["female", "male", "intersex", "unspecified"]
+    date_of_birth: date
+    external_id: str | None = Field(default=None, max_length=120)
+    affected_side: Literal["right", "left"]
+    affected_region: Literal["arm", "leg"]
+    comments: str | None = Field(default=None, max_length=2000)
 
 
 class UserCreate(BaseModel):
@@ -191,10 +196,32 @@ def initialize_database():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 gender TEXT,
+                date_of_birth TEXT,
+                age_years INTEGER,
+                external_id TEXT,
+                affected_side TEXT,
+                affected_region TEXT,
+                comments TEXT,
                 created_at TEXT NOT NULL
             )
             """
         )
+        patient_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(patients)")
+        }
+        patient_profile_columns = {
+            "date_of_birth": "TEXT",
+            "age_years": "INTEGER",
+            "external_id": "TEXT",
+            "affected_side": "TEXT",
+            "affected_region": "TEXT",
+            "comments": "TEXT",
+        }
+        for column_name, column_type in patient_profile_columns.items():
+            if column_name not in patient_columns:
+                connection.execute(
+                    f"ALTER TABLE patients ADD COLUMN {column_name} {column_type}"
+                )
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS logs (
@@ -230,6 +257,12 @@ def patient_from_row(row):
         "id": row["id"],
         "name": row["name"],
         "gender": row["gender"],
+        "date_of_birth": row["date_of_birth"],
+        "age_years": row["age_years"],
+        "external_id": row["external_id"],
+        "affected_side": row["affected_side"],
+        "affected_region": row["affected_region"],
+        "comments": row["comments"],
         "logs": [],
         "created_at": row["created_at"],
         "last_log_at": row["last_log_at"] if "last_log_at" in row.keys() else None,
@@ -607,12 +640,29 @@ def create_patient(patient: PatientCreate, user: dict = Depends(get_current_user
     name = patient.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="El nombre es obligatorio")
+    if patient.date_of_birth > date.today():
+        raise HTTPException(status_code=422, detail="La fecha de nacimiento no puede ser futura")
 
     created_at = datetime.now(timezone.utc).isoformat()
     with get_connection() as connection:
         cursor = connection.execute(
-            "INSERT INTO patients (name, gender, created_at) VALUES (?, ?, ?)",
-            (name, patient.gender, created_at),
+            """
+            INSERT INTO patients (
+                name, gender, date_of_birth, age_years, external_id,
+                affected_side, affected_region, comments, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                name,
+                patient.gender,
+                patient.date_of_birth.isoformat(),
+                None,
+                patient.external_id.strip() or None if patient.external_id else None,
+                patient.affected_side,
+                patient.affected_region,
+                patient.comments.strip() or None if patient.comments else None,
+                created_at,
+            ),
         )
         row = connection.execute(
             "SELECT * FROM patients WHERE id = ?", (cursor.lastrowid,)

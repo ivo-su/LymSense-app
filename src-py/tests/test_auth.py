@@ -379,3 +379,117 @@ def test_profile_update_rejects_duplicate_login_email():
             "/account/profile", json={"email": "bob@example.com"}
         )
         assert conflict.status_code == 409, conflict.text
+
+
+def test_create_patient_saves_clinical_demographics_and_limb():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Doctor", "email": "doctor@example.com", "password": "secret123"},
+        )
+
+        created = client.post(
+            "/patients",
+            json={
+                "name": "Patient One",
+                "gender": "female",
+                "date_of_birth": "1984-03-14",
+                "external_id": "MRN-2048",
+                "affected_side": "left",
+                "affected_region": "arm",
+                "comments": "Post-surgical swelling",
+            },
+        )
+
+        assert created.status_code == 201, created.text
+        patient_id = created.json()["id"]
+        details = client.get(f"/patients/{patient_id}")
+        assert details.status_code == 200, details.text
+        assert details.json()["external_id"] == "MRN-2048"
+        assert details.json()["date_of_birth"] == "1984-03-14"
+        assert details.json()["affected_side"] == "left"
+        assert details.json()["affected_region"] == "arm"
+        assert details.json()["comments"] == "Post-surgical swelling"
+        assert details.json()["id"] != "MRN-2048"
+
+
+def test_create_patient_requires_date_of_birth():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Doctor", "email": "doctor@example.com", "password": "secret123"},
+        )
+
+        response = client.post(
+            "/patients",
+            json={
+                "name": "Patient Two",
+                "gender": "male",
+                "affected_side": "right",
+                "affected_region": "leg",
+            },
+        )
+
+        assert response.status_code == 422, response.text
+
+
+def test_create_patient_rejects_future_birthdate():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Doctor", "email": "doctor@example.com", "password": "secret123"},
+        )
+        base_payload = {
+            "name": "Patient Three",
+            "gender": "unspecified",
+            "affected_side": "right",
+            "affected_region": "arm",
+        }
+
+        future_date = client.post(
+            "/patients", json={**base_payload, "date_of_birth": "2999-01-01"}
+        )
+
+        assert future_date.status_code == 422
+
+
+def test_existing_patients_keep_data_after_patient_profile_migration():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        data_dir = Path(tmp_dir) / "lymsense-auth"
+        data_dir.mkdir()
+        connection = sqlite3.connect(data_dir / "lymsense.db")
+        connection.execute(
+            """
+            CREATE TABLE patients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                gender TEXT,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO patients (name, gender, created_at) VALUES (?, ?, ?)",
+            ("Paciente anterior", "female", "2026-01-01T00:00:00+00:00"),
+        )
+        connection.commit()
+        connection.close()
+
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Doctor", "email": "doctor@example.com", "password": "secret123"},
+        )
+        patients = client.get("/patients")
+
+        assert patients.status_code == 200, patients.text
+        assert patients.json()[0]["name"] == "Paciente anterior"
+        assert patients.json()[0]["date_of_birth"] is None
+        assert patients.json()[0]["affected_region"] is None
