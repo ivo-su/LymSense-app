@@ -135,6 +135,13 @@ export function updateAccountProfile(profile) {
   });
 }
 
+export function changeAccountPassword(passwords) {
+  return request("/account/password", {
+    method: "POST",
+    body: JSON.stringify(passwords),
+  });
+}
+
 export function getPatients(search = "") {
   const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
   return request(`/patients${query}`);

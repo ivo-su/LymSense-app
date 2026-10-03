@@ -67,6 +67,12 @@ class UserProfileUpdate(BaseModel):
     contact_email: str | None = Field(default=None, max_length=255)
 
 
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=8, max_length=255)
+    new_password: str = Field(min_length=8, max_length=255)
+    confirm_password: str = Field(min_length=8, max_length=255)
+
+
 class UserLogin(BaseModel):
     email: str = Field(min_length=1, max_length=255)
     password: str = Field(min_length=8, max_length=255)
@@ -438,6 +444,50 @@ def update_account_profile(
         raise HTTPException(status_code=409, detail="Ese email ya está registrado") from exc
 
     return dict(row)
+
+
+@app.post("/account/password")
+def change_account_password(
+    payload: PasswordChange,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    if not secrets.compare_digest(payload.new_password, payload.confirm_password):
+        raise HTTPException(status_code=400, detail="Las contraseñas nuevas no coinciden")
+
+    authorization = request.headers.get("authorization", "")
+    session_token = request.cookies.get(SESSION_COOKIE_NAME)
+    if not session_token and authorization.startswith("Bearer "):
+        session_token = authorization.split(" ", 1)[1].strip()
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Se requiere autenticación")
+
+    with get_connection() as connection:
+        stored_user = connection.execute(
+            "SELECT password_hash FROM users WHERE id = ?",
+            (user["id"],),
+        ).fetchone()
+        try:
+            password_hasher.verify(stored_user["password_hash"], payload.current_password)
+        except VerifyMismatchError as exc:
+            raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta") from exc
+
+        if secrets.compare_digest(payload.current_password, payload.new_password):
+            raise HTTPException(
+                status_code=400,
+                detail="La contraseña nueva debe ser diferente de la actual",
+            )
+
+        connection.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (password_hasher.hash(payload.new_password), user["id"]),
+        )
+        connection.execute(
+            "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
+            (user["id"], hash_session_token(session_token)),
+        )
+
+    return {"message": "La contraseña se actualizó correctamente"}
 
 
 def require_admin(user: dict = Depends(get_current_user)):

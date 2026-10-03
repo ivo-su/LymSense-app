@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import BackButton from "../components/BackButton";
-import { getAccountProfile, updateAccountProfile } from "../api";
+import Modal from "../components/Modal";
+import { changeAccountPassword, getAccountProfile, updateAccountProfile } from "../api";
 
 const profileFields = [
   { name: "medical_credentials", label: "Credenciales médicas", placeholder: "Médico/a, Doctor/a", maxLength: 200 },
@@ -18,6 +19,9 @@ function Profile({ onProfileUpdated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
     async function loadProfile() {
@@ -60,6 +64,30 @@ function Profile({ onProfileUpdated }) {
       setError(saveError.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const passwords = Object.fromEntries(new FormData(form).entries());
+
+    if (passwords.new_password !== passwords.confirm_password) {
+      setPasswordError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+
+    try {
+      setPasswordSaving(true);
+      setPasswordError("");
+      await changeAccountPassword(passwords);
+      form.reset();
+      setPasswordModalOpen(false);
+      setNotice("Contraseña actualizada.");
+    } catch (submitError) {
+      setPasswordError(submitError.message);
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -134,12 +162,63 @@ function Profile({ onProfileUpdated }) {
               </label>
             </div>
           </section>
+          <section className="box profile-security-section">
+            <div>
+              <h2>Seguridad</h2>
+              <p>Cambia la contraseña de acceso a tu cuenta.</p>
+            </div>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                setPasswordError("");
+                setPasswordModalOpen(true);
+              }}
+            >Cambiar contraseña</button>
+          </section>
           {/* {notice && <p role="status">{notice}</p>} */}
           <button type="submit" className="btn" disabled={saving} style={{margin: "0 0 0 auto"}}>
             {saving ? "Guardando..." : notice || "Guardar perfil"}
           </button>
         </form>
       )}
+      <Modal
+        isOpen={passwordModalOpen}
+        onClose={() => !passwordSaving && setPasswordModalOpen(false)}
+        title="Cambiar contraseña"
+        footer={(
+          <>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setPasswordModalOpen(false)}
+              disabled={passwordSaving}
+            >Cancelar</button>
+            <button
+              type="submit"
+              className="btn"
+              form="change-password-form"
+              disabled={passwordSaving}
+            >{passwordSaving ? "Actualizando..." : "Actualizar contraseña"}</button>
+          </>
+        )}
+      >
+        <form className="password-change-form" id="change-password-form" onSubmit={handlePasswordSubmit}>
+          <label className="profile-field" htmlFor="current-password">
+            Contraseña actual
+            <input id="current-password" name="current_password" type="password" required minLength={8} maxLength={255} autoComplete="current-password" />
+          </label>
+          <label className="profile-field" htmlFor="new-password">
+            Nueva contraseña
+            <input id="new-password" name="new_password" type="password" required minLength={8} maxLength={255} autoComplete="new-password" />
+          </label>
+          <label className="profile-field" htmlFor="confirm-password">
+            Confirmar nueva contraseña
+            <input id="confirm-password" name="confirm_password" type="password" required minLength={8} maxLength={255} autoComplete="new-password" />
+          </label>
+          {passwordError && <p className="error" role="alert">{passwordError}</p>}
+        </form>
+      </Modal>
     </>
   );
 }

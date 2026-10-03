@@ -381,6 +381,58 @@ def test_profile_update_rejects_duplicate_login_email():
         assert conflict.status_code == 409, conflict.text
 
 
+def test_user_can_change_password_with_valid_current_and_matching_confirmation():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Alice", "email": "alice@example.com", "password": "secret123"},
+        )
+
+        mismatch = client.post(
+            "/account/password",
+            json={
+                "current_password": "secret123",
+                "new_password": "changed456",
+                "confirm_password": "different789",
+            },
+        )
+        wrong_current = client.post(
+            "/account/password",
+            json={
+                "current_password": "incorrect123",
+                "new_password": "changed456",
+                "confirm_password": "changed456",
+            },
+        )
+        assert mismatch.status_code == 400
+        assert wrong_current.status_code == 400
+        assert client.get("/account/profile").status_code == 200
+
+        changed = client.post(
+            "/account/password",
+            json={
+                "current_password": "secret123",
+                "new_password": "changed456",
+                "confirm_password": "changed456",
+            },
+        )
+        assert changed.status_code == 200, changed.text
+        assert client.get("/account/profile").status_code == 200
+
+        old_password_login = TestClient(app).post(
+            "/auth/login",
+            json={"email": "alice@example.com", "password": "secret123"},
+        )
+        new_password_login = TestClient(app).post(
+            "/auth/login",
+            json={"email": "alice@example.com", "password": "changed456"},
+        )
+        assert old_password_login.status_code == 401
+        assert new_password_login.status_code == 200, new_password_login.text
+
+
 def test_create_patient_saves_clinical_demographics_and_limb():
     with tempfile.TemporaryDirectory() as tmp_dir:
         app = load_app(Path(tmp_dir))
