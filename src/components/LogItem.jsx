@@ -11,6 +11,9 @@ function LogItem({ log, onDelete, onReference }){
   const importedDate = log?.imported_at
     ? new Date(log.imported_at).toLocaleDateString("es-AR")
     : "Sin fecha";
+  const measurementSummary = (log?.measurements || [])
+    .map((measurement) => `${measurement.type}: ${measurement.impedance}`)
+    .join(" · ");
 
   return <>
     <div className="log-list-item">
@@ -19,13 +22,18 @@ function LogItem({ log, onDelete, onReference }){
       </div>
       <div style={{margin: "0 0 0 .5em", display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'start'}}>
         <Link to={`/patients/${patientId}`} style={{fontWeight: '500', textAlign: 'left'}}>{patientName}</Link>
-        <span style={{ fontSize: '0.9em', color: '#666' }}>{importedDate}</span>
+        <span style={{ fontSize: '0.9em', color: '#666' }}>
+          {importedDate}
+        </span>
       </div>
       <div style={{ margin: "0 0 0 auto", display: 'flex', flexDirection: 'row', gap: ".25em", justifyContent: 'center', alignItems: 'center'}}>
-        <div className="icon-container">
+        {/* <div className="icon-container">
           <LuChartLine size={18} /> 
-        </div> 
-        {formatLdex(log?.ldex)}
+        </div>  */}
+        {measurementSummary && <span style={{ fontSize: '0.85em', color: '#666' }}>
+          {measurementSummary}
+        </span>}
+        {/* {formatLdex(log?.ldex)} */}
       </div>
       <div style={{ display: 'flex', flexDirection: 'row', gap: ".25em", justifyContent: 'center', alignItems: 'center'}}>
         <div className="icon-container">
@@ -48,8 +56,8 @@ function LogItem({ log, onDelete, onReference }){
         className=""
         style={{padding: "0.25em", color: log?.reference ? "#d97706" : "#6b7280", background:"none", border:'none', margin:"0 0 0 0.25em"}}
         onClick={() => onReference(log)}
-        aria-label={log?.reference ? "Registro de referencia" : "Marcar como referencia"}
-        title={log?.reference ? "Registro de referencia" : "Marcar como referencia"}
+        aria-label={log?.reference ? "Referencia fija seleccionada" : "Usar como referencia fija"}
+        title={log?.reference ? "Referencia fija seleccionada" : "Usar como referencia fija"}
       >
         <LuStar size={18} fill={log?.reference ? "currentColor" : "none"} />
       </button>}

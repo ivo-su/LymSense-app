@@ -193,7 +193,7 @@ nav.main-nav {
   top: 0;
   display: flex;
   justify-content: space-between;
-  padding: .5em 2em;
+  padding: 1em 2em;
   width: 100%;
   box-sizing: border-box;
   max-width: 100%;
@@ -256,7 +256,8 @@ nav.main-nav div:last-child{
 }
 
 .accounts-form .input-container,
-.accounts-form .custom-select {
+.accounts-form .custom-select,
+.input-container.full {
   max-width: none;
 }
 
@@ -577,10 +578,22 @@ nav.main-nav div:last-child{
   color: #a03c37;
 }
 
+.patient-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-left: auto;
+}
+
 @media (max-width: 700px) {
   .account-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .patient-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .account-row-actions {
@@ -767,8 +780,9 @@ form.col{
 
 .graph-container{
   position: relative;
-  height: 400px;
-  width: 800px;
+  height: 320px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
 }
 
@@ -780,49 +794,20 @@ form.col{
   gap: 1em;
 }
 
-.patient-info {
+/* .patient-info {
   display: flex;
   flex-direction: column;
   justify-content: start;
   align-items: start;
   gap: 1em;
   padding: 2em;
-}
+} */
 
-@media (max-width: 1400px) {
-  .graph-container{
-  /* height: 200px; */
-    width: 600px;
-  }
-}
-
-@media (max-width: 1200px) {
-  .graph-container{
-  /* height: 200px; */
-    width: 500px;
-  }
-}
-
-@media (max-width: 1100px) {
-  .graph-container{
-  /* height: 200px; */
-    width: 400px;
-  }
-}
-
-@media (max-width: 1000px) {
-  .graph-container{
-    height: 300px;
-  }
-
-  .patient-overview {
-    flex-wrap: wrap;
-  }
-
-  .patient-info {
+.patient-info {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: center;
+    align-items: self-start;
+    text-align: left;
     width: 100%;
     box-sizing: border-box;
     gap: 1em;
@@ -833,6 +818,16 @@ form.col{
   .patient-info h3 {
     grid-column: 1 / -1;
   }
+
+@media (max-width: 1000px) {
+  .graph-container{
+    height: 300px;
+  }
+
+  .patient-overview {
+    flex-wrap: wrap;
+  }
+
 }
 
 .box.log-list{

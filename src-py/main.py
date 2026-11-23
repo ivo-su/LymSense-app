@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 import hashlib
+import json
 import math
 import os
 import secrets
@@ -255,6 +256,15 @@ def initialize_database():
             connection.execute("ALTER TABLE logs ADD COLUMN z_risk REAL")
         if "reference" not in columns:
             connection.execute("ALTER TABLE logs ADD COLUMN reference INTEGER NOT NULL DEFAULT 0")
+        if "session_number" not in columns:
+            connection.execute("ALTER TABLE logs ADD COLUMN session_number INTEGER")
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_logs_csv_session
+            ON logs (patient_id, filename, session_number)
+            WHERE session_number IS NOT NULL
+            """
+        )
         connection.execute("UPDATE logs SET reference = 0 WHERE z_risk IS NULL")
 
 
@@ -660,11 +670,12 @@ def get_patient(patient_id: int, user: dict = Depends(get_current_user)):
 
         logs = connection.execute(
             """
-            SELECT id, patient_id, filename, ldex, z_healthy, z_risk, reference, imported_at,
-                   log_number, total_logs
+            SELECT id, patient_id, filename, content, session_number, ldex, z_healthy, z_risk,
+                   reference, imported_at, log_number, total_logs
             FROM (
-                  SELECT logs.id, logs.patient_id, logs.filename, logs.ldex,
-                      logs.z_healthy, logs.z_risk, logs.reference, logs.imported_at,
+                  SELECT logs.id, logs.patient_id, logs.filename, logs.content,
+                      logs.session_number, logs.ldex, logs.z_healthy, logs.z_risk,
+                      logs.reference, logs.imported_at,
                        ROW_NUMBER() OVER (
                            PARTITION BY logs.patient_id
                            ORDER BY logs.imported_at ASC, logs.id ASC
@@ -681,7 +692,15 @@ def get_patient(patient_id: int, user: dict = Depends(get_current_user)):
         ).fetchall()
 
     result = patient_from_row(patient)
-    result["logs"] = [dict(log) for log in logs]
+    result["logs"] = [
+        {
+            **dict(log),
+            "measurements": json.loads(log["content"])
+            if log["session_number"] is not None
+            else [],
+        }
+        for log in logs
+    ]
     return result
 
 
@@ -725,6 +744,22 @@ class LogCreate(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     z_healthy: float
     z_risk: float
+
+
+class CsvMeasurement(BaseModel):
+    type: Literal["REF", "AFE"]
+    number: int = Field(ge=1)
+    impedance: float
+
+
+class CsvSession(BaseModel):
+    session_number: int = Field(ge=1)
+    measurements: list[CsvMeasurement] = Field(min_length=1)
+
+
+class CsvImport(BaseModel):
+    filename: str = Field(min_length=1, max_length=255)
+    sessions: list[CsvSession] = Field(min_length=1)
 
 
 @app.post("/logs", status_code=201)
@@ -772,16 +807,83 @@ def create_log(log: LogCreate, user: dict = Depends(get_current_user)):
     }
 
 
+@app.post("/patients/{patient_id}/logs/import", status_code=201)
+def import_patient_sessions(
+    patient_id: int,
+    payload: CsvImport,
+    user: dict = Depends(get_current_user),
+):
+    session_numbers = [session.session_number for session in payload.sessions]
+    if len(session_numbers) != len(set(session_numbers)):
+        raise HTTPException(status_code=422, detail="El archivo contiene sesiones duplicadas")
+
+    for session in payload.sessions:
+        measurement_types = [measurement.type for measurement in session.measurements]
+        if len(measurement_types) != len(set(measurement_types)):
+            raise HTTPException(
+                status_code=422,
+                detail=f"La sesión {session.session_number} contiene lecturas duplicadas",
+            )
+        for measurement in session.measurements:
+            if measurement.number != session.session_number:
+                raise HTTPException(
+                    status_code=422,
+                    detail="El número de cada lectura debe coincidir con su sesión",
+                )
+            if not math.isfinite(measurement.impedance):
+                raise HTTPException(
+                    status_code=422,
+                    detail="Las impedancias deben ser números válidos",
+                )
+
+    imported_count = 0
+    imported_at = datetime.now(timezone.utc).isoformat()
+    with get_connection() as connection:
+        patient = connection.execute(
+            "SELECT id FROM patients WHERE id = ?", (patient_id,)
+        ).fetchone()
+        if patient is None:
+            raise HTTPException(status_code=404, detail="Paciente no encontrado")
+
+        for session in payload.sessions:
+            cursor = connection.execute(
+                """
+                INSERT OR IGNORE INTO logs (
+                    patient_id, filename, content, imported_at, session_number
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    patient_id,
+                    payload.filename.strip(),
+                    json.dumps(
+                        [measurement.model_dump() for measurement in session.measurements],
+                        ensure_ascii=False,
+                    ),
+                    imported_at,
+                    session.session_number,
+                ),
+            )
+            imported_count += cursor.rowcount
+
+    return {
+        "patient_id": patient_id,
+        "filename": payload.filename.strip(),
+        "imported_count": imported_count,
+        "session_numbers": session_numbers,
+    }
+
+
 @app.get("/logs")
 def list_logs(user: dict = Depends(get_current_user)):
     with get_connection() as connection:
         rows = connection.execute(
             """
-            SELECT id, patient_id, patient_name, filename, ldex, z_healthy, z_risk, reference, imported_at,
-                   log_number, total_logs
+            SELECT id, patient_id, patient_name, filename, content, session_number, ldex,
+                   z_healthy, z_risk, reference, imported_at, log_number, total_logs
             FROM (
                 SELECT logs.id, logs.patient_id, patients.name AS patient_name,
-                       logs.filename, logs.ldex, logs.z_healthy, logs.z_risk, logs.reference, logs.imported_at,
+                       logs.filename, logs.content, logs.session_number, logs.ldex,
+                       logs.z_healthy, logs.z_risk, logs.reference, logs.imported_at,
                        ROW_NUMBER() OVER (
                            PARTITION BY logs.patient_id
                            ORDER BY logs.imported_at ASC, logs.id ASC
@@ -796,21 +898,36 @@ def list_logs(user: dict = Depends(get_current_user)):
             """
         ).fetchall()
 
-    return [dict(row) for row in rows]
+    return [
+        {
+            **dict(row),
+            "measurements": json.loads(row["content"])
+            if row["session_number"] is not None
+            else [],
+        }
+        for row in rows
+    ]
 
 
 @app.patch("/logs/{log_id}/reference")
 def set_log_reference(log_id: int, user: dict = Depends(get_current_user)):
     with get_connection() as connection:
         log = connection.execute(
-            "SELECT patient_id, z_risk FROM logs WHERE id = ?", (log_id,)
+            "SELECT patient_id, z_risk, content, session_number FROM logs WHERE id = ?",
+            (log_id,),
         ).fetchone()
         if log is None:
             raise HTTPException(status_code=404, detail="Registro no encontrado")
-        if log["z_risk"] is None:
+        has_reference_measurement = log["z_risk"] is not None
+        if log["session_number"] is not None:
+            has_reference_measurement = any(
+                measurement["type"] == "REF"
+                for measurement in json.loads(log["content"])
+            )
+        if not has_reference_measurement:
             raise HTTPException(
                 status_code=422,
-                detail="Este registro no tiene z_risk y no puede ser referencia",
+                detail="Este registro no contiene una medición REF para usar como referencia",
             )
 
         connection.execute(

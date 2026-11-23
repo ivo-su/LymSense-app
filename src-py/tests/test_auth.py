@@ -467,6 +467,115 @@ def test_create_patient_saves_clinical_demographics_and_limb():
         assert details.json()["id"] != "MRN-2048"
 
 
+def test_csv_session_import_preserves_partial_measurements_and_is_idempotent():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Doctor", "email": "doctor@example.com", "password": "secret123"},
+        )
+        patient = client.post(
+            "/patients",
+            json={
+                "name": "John Doe",
+                "gender": "male",
+                "date_of_birth": "1980-01-01",
+                "affected_side": "right",
+                "affected_region": "arm",
+            },
+        ).json()
+        payload = {
+            "filename": "patient-1.csv",
+            "sessions": [
+                {
+                    "session_number": 2,
+                    "measurements": [
+                        {"type": "AFE", "number": 2, "impedance": 668.16}
+                    ],
+                },
+                {
+                    "session_number": 3,
+                    "measurements": [
+                        {"type": "AFE", "number": 3, "impedance": 88.11},
+                        {"type": "REF", "number": 3, "impedance": 88.12},
+                    ],
+                },
+                {
+                    "session_number": 4,
+                    "measurements": [
+                        {"type": "REF", "number": 4, "impedance": 90.0}
+                    ],
+                },
+            ],
+        }
+
+        imported = client.post(f"/patients/{patient['id']}/logs/import", json=payload)
+        repeated = client.post(f"/patients/{patient['id']}/logs/import", json=payload)
+        details = client.get(f"/patients/{patient['id']}")
+        listed_logs = client.get("/logs")
+
+        assert imported.status_code == 201, imported.text
+        assert imported.json()["imported_count"] == 3
+        assert repeated.status_code == 201, repeated.text
+        assert repeated.json()["imported_count"] == 0
+        logs = details.json()["logs"]
+        assert len(logs) == 3
+        assert logs[0]["session_number"] == 2
+        assert logs[0]["measurements"] == [
+            {"type": "AFE", "number": 2, "impedance": 668.16}
+        ]
+        assert logs[1]["ldex"] is None
+        session_three = next(log for log in listed_logs.json() if log["session_number"] == 3)
+        assert session_three["measurements"] == [
+            {"type": "AFE", "number": 3, "impedance": 88.11},
+            {"type": "REF", "number": 3, "impedance": 88.12},
+        ]
+        assert client.patch(f"/logs/{logs[0]['id']}/reference").status_code == 422
+        selected_reference = client.patch(f"/logs/{logs[2]['id']}/reference")
+        assert selected_reference.status_code == 200, selected_reference.text
+        assert selected_reference.json()["reference"] == 1
+        assert client.get(f"/patients/{patient['id']}").json()["logs"][2]["reference"] == 1
+
+
+def test_csv_session_import_rejects_duplicate_reading_types():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        app = load_app(Path(tmp_dir))
+        client = TestClient(app)
+        client.post(
+            "/auth/signup",
+            json={"name": "Doctor", "email": "doctor@example.com", "password": "secret123"},
+        )
+        patient = client.post(
+            "/patients",
+            json={
+                "name": "John Doe",
+                "gender": "male",
+                "date_of_birth": "1980-01-01",
+                "affected_side": "right",
+                "affected_region": "arm",
+            },
+        ).json()
+
+        response = client.post(
+            f"/patients/{patient['id']}/logs/import",
+            json={
+                "filename": "patient-1.csv",
+                "sessions": [
+                    {
+                        "session_number": 2,
+                        "measurements": [
+                            {"type": "AFE", "number": 2, "impedance": 668.16},
+                            {"type": "AFE", "number": 2, "impedance": 670.0},
+                        ],
+                    }
+                ],
+            },
+        )
+
+        assert response.status_code == 422, response.text
+
+
 def test_create_patient_requires_date_of_birth():
     with tempfile.TemporaryDirectory() as tmp_dir:
         app = load_app(Path(tmp_dir))

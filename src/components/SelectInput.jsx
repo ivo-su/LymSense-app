@@ -1,22 +1,66 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LuArrowDown } from 'react-icons/lu';
 
-function SelectInput({ options = [], value, defaultValue, onChange, placeholder = 'Selecciona una opción', disabled = false, name, className, ariaLabel}) {
+function SelectInput({ options = [], value, defaultValue, onChange, placeholder = 'Selecciona una opción', disabled = false, name, className, ariaLabel, style}) {
 	const [open, setOpen] = useState(false);
 	const [internalValue, setInternalValue] = useState(defaultValue);
+	const [menuPosition, setMenuPosition] = useState({});
 	const containerRef = useRef(null);
+	const menuRef = useRef(null);
 
 	const selectedValue = value !== undefined ? value : internalValue;
 	const selectedOption = options.find((option) => option.value === selectedValue);
 
 	useEffect(() => {
 		const handleOutsideClick = (event) => {
-			if (!containerRef.current?.contains(event.target)) setOpen(false);
+			if (
+				!containerRef.current?.contains(event.target)
+				&& !menuRef.current?.contains(event.target)
+			) {
+				setOpen(false);
+			}
 		};
 
 		document.addEventListener('mousedown', handleOutsideClick);
 		return () => document.removeEventListener('mousedown', handleOutsideClick);
 	}, []);
+
+	useLayoutEffect(() => {
+		if (!open) return undefined;
+
+		const updateMenuPosition = () => {
+			const trigger = containerRef.current?.getBoundingClientRect();
+			if (!trigger) return;
+
+			const preferredHeight = Math.min(240, options.length * 42 + 8);
+			const spaceBelow = window.innerHeight - trigger.bottom - 8;
+			const spaceAbove = trigger.top - 8;
+			const openAbove = spaceBelow < preferredHeight && spaceAbove > spaceBelow;
+			const availableHeight = Math.max(
+				80,
+				Math.min(240, openAbove ? spaceAbove : spaceBelow),
+			);
+			const menuHeight = Math.min(preferredHeight, availableHeight);
+			const width = Math.min(trigger.width, window.innerWidth - 16);
+
+			setMenuPosition({
+				left: Math.max(8, Math.min(trigger.left, window.innerWidth - width - 8)),
+				top: openAbove ? trigger.top - menuHeight - 4 : trigger.bottom + 4,
+				width,
+				maxHeight: availableHeight,
+			});
+		};
+
+		updateMenuPosition();
+		window.addEventListener('resize', updateMenuPosition);
+		document.addEventListener('scroll', updateMenuPosition, true);
+
+		return () => {
+			window.removeEventListener('resize', updateMenuPosition);
+			document.removeEventListener('scroll', updateMenuPosition, true);
+		};
+	}, [open, options.length]);
 
 	const selectOption = (option) => {
 		if (value === undefined) setInternalValue(option.value);
@@ -42,7 +86,7 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 	};
 
 	return (
-		<div ref={containerRef} style={styles.container} className={`custom-select ${className}`}>
+		<div ref={containerRef} style={{ ...styles.container, ...style }} className={`custom-select ${className}`}>
 			{name && <input type="hidden" name={name} value={selectedValue ?? ''} />}
 			<button
 				className='trigger'
@@ -61,8 +105,13 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 				<span aria-hidden="true" style={{ ...styles.arrow, transform: open ? 'rotate(180deg)' : 'none' }}><LuArrowDown /></span>
 			</button>
 
-			{open && (
-				<div role="listbox" aria-label={ariaLabel || selectedOption?.label || placeholder} style={styles.menu}>
+			{open && createPortal(
+				<div
+					ref={menuRef}
+					role="listbox"
+					aria-label={ariaLabel || selectedOption?.label || placeholder}
+					style={{ ...styles.menu, ...menuPosition }}
+				>
 					{options.map((option) => (
 						<button
 							type="button"
@@ -75,14 +124,15 @@ function SelectInput({ options = [], value, defaultValue, onChange, placeholder 
 							{option.label}
 						</button>
 					))}
-				</div>
+				</div>,
+				document.body,
 			)}
 		</div>
 	);
 }
 
 const styles = {
-	container: { position: 'relative', width: '100%', maxWidth: 320, fontFamily: 'inherit' },
+	container: { position: 'relative', width: '100%', fontFamily: 'inherit' },
 	// trigger: {
 	// 	alignItems: 'center', background: 'none', border: 'none', borderRadius: 6,
 	// 	boxSizing: 'border-box', cursor: 'pointer', display: 'flex', font: 'inherit', justifyContent: 'space-between',
@@ -98,7 +148,7 @@ const styles = {
 	arrow: { color: '#475569', fontSize: 18, lineHeight: 1, transition: 'transform 150ms ease',  display: 'flex', alignItems: 'center' },
 	menu: {
 		background: '#fff', border: '1px solid #cbd5e1', borderRadius: 6, boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12)',
-		left: 0, maxHeight: 240, overflowY: 'auto', padding: 4, position: 'absolute', right: 0, top: 'calc(100% + 4px)', zIndex: 99,
+		maxHeight: 240, overflowY: 'auto', padding: 4, position: 'fixed', zIndex: 1100,
 	},
 	option: {
 		background: '#fff', border: 0, borderRadius: 4, cursor: 'pointer', display: 'block', font: 'inherit',

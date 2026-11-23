@@ -2,119 +2,14 @@ import { LuCirclePlus, LuList, LuTriangleAlert, LuUserPlus, LuUsers } from "reac
 import { useEffect, useState } from "react";
 import Modal from "../components/Modal";
 import NewPatientForm from "../components/NewPatientForm";
+import PatientCsvImportForm from "../components/PatientCsvImportForm";
 import { Link, useNavigate } from "react-router";
 import LogItem from "../components/LogItem";
 import PatientItem from "../components/PatientItem";
 import SelectInput from "../components/SelectInput";
-import { createLog, getLogs, getPatients } from "../api";
+import { getLogs, getPatients } from "../api";
 
-function NewLogForm({ patients, onSaved, onPatientsReload }) {
-  const [error, setError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError("");
-    const form = event.currentTarget;
-    const file = form.elements.file.files[0];
-    const patientId = form.elements.patient_id.value;
-    const healthyInput = form.elements.z_healthy.value.trim();
-    const riskInput = form.elements.z_risk.value.trim();
-
-    if (!patientId) {
-      setError("Selecciona el paciente al que pertenece el registro.");
-      return;
-    }
-
-    if (!file && (!healthyInput || !riskInput)) {
-      setError("Selecciona un archivo o completa z_healthy y z_risk.");
-      return;
-    }
-
-    if ((healthyInput && !riskInput) || (!healthyInput && riskInput)) {
-      setError("Completa ambas mediciones manuales.");
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      const availablePatients = await onPatientsReload();
-      if (!availablePatients.some((patient) => patient.id === Number(patientId))) {
-        throw new Error("El paciente seleccionado ya no existe. Selecciona otro paciente.");
-      }
-
-      let zHealthy;
-      let zRisk;
-      let filename = "manual-entry.json";
-
-      if (healthyInput && riskInput) {
-        zHealthy = Number(healthyInput.replace(",", "."));
-        zRisk = Number(riskInput.replace(",", "."));
-      } else {
-        let parsedContent;
-        try {
-          parsedContent = JSON.parse(await file.text());
-        } catch {
-          throw new Error("El archivo no contiene un documento JSON válido.");
-        }
-        zHealthy = Number(parsedContent?.z_healthy);
-        zRisk = Number(String(parsedContent?.z_risk ?? "").replace(",", "."));
-        filename = file.name;
-      }
-      if (!Number.isFinite(zHealthy) || !Number.isFinite(zRisk)) {
-        throw new Error("El archivo debe contener z_healthy y z_risk numéricos.");
-      }
-      if (zRisk === 0) {
-        throw new Error("La medición z_risk no puede ser cero.");
-      }
-
-      await createLog({
-        patient_id: Number(patientId),
-        filename,
-        z_healthy: zHealthy,
-        z_risk: zRisk,
-      });
-      
-      form.reset();
-      onSaved(patientId);
-    } catch (submitError) {
-      setError(submitError.message);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return <form className="col" onSubmit={handleSubmit} id="new-log-form">
-    <div className="input-container">
-      <SelectInput
-        name="patient_id"
-        defaultValue=""
-        placeholder="Selecciona un paciente"
-        options={patients.map((patient) => ({
-          value: String(patient.id),
-          label: patient.name,
-        }))}
-        className=""
-      />
-      <label htmlFor="patient_id">Paciente</label>
-    </div>
-    <div className="input-container">
-      <input type="file" name="file" accept=".json,application/json" id="file"/>
-      <label htmlFor="file">Archivo del dispositivo</label>
-    </div>
-    <div className="input-container">
-      <input type="text" name="z_healthy" placeholder=" " inputMode="decimal" id="z_healthy"/>
-      <label htmlFor="z_healthy">z_healthy (ingreso manual)</label>
-    </div>
-    <div className="input-container">
-      <input type="text" name="z_risk" placeholder=" " inputMode="decimal" id="z_risk"/>
-      <label htmlFor="z_risk">z_risk (ingreso manual)</label>
-    </div>
-    {patients.length === 0 && <p>No hay pacientes disponibles para asociar el registro.</p>}
-    {error && <p role="alert">{error}</p>}
-    {isSaving && <p>Guardando registro...</p>}
-  </form>;
-}
+const HOME_DASHBOARD_LIST_LIMIT = 8;
 
 function Home() {
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -123,13 +18,14 @@ function Home() {
   const [recentLogs, setRecentLogs] = useState([]);
   const [nextPatients, setNextPatients] = useState([]);
   const [patientsError, setPatientsError] = useState("");
+  const [selectedPatientId, setSelectedPatientId] = useState("");
   const navigate = useNavigate()
 
   useEffect(() => {
     Promise.all([getPatients(), getLogs()])
       .then(([loadedPatients, loadedLogs]) => {
         setPatients(loadedPatients);
-        setRecentLogs(loadedLogs.slice(0, 5));
+        setRecentLogs(loadedLogs.slice(0, HOME_DASHBOARD_LIST_LIMIT));
 
         const latestLogByPatient = new Map();
         loadedLogs.forEach((log) => {
@@ -146,7 +42,7 @@ function Home() {
           if (!firstLatest) return -1;
           if (!secondLatest) return 1;
           return new Date(firstLatest) - new Date(secondLatest);
-        }).slice(0, 5));
+        }).slice(0, HOME_DASHBOARD_LIST_LIMIT));
       })
       .catch((error) => setPatientsError(error.message));
   }, []);
@@ -155,6 +51,7 @@ function Home() {
     try {
       setPatientsError("");
       setPatients(await getPatients());
+      setSelectedPatientId("");
       setIsLogOpen(true);
     } catch (error) {
       setPatientsError(error.message);
@@ -165,10 +62,10 @@ function Home() {
     <>
       <div className="box" style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
         <h1>Bienvenido!</h1>
-        <span style={{ margin: "0 0 0 auto", fontSize: '0.9em', color: '#666', display: 'flex', alignItems: 'center', gap: "0.5em" }}><LuTriangleAlert size={20} /> El dispositivo está sin conexión</span>
+        {/* <span style={{ margin: "0 0 0 auto", fontSize: '0.9em', color: '#666', display: 'flex', alignItems: 'center', gap: "0.5em" }}><LuTriangleAlert size={20} /> El dispositivo está sin conexión</span> */}
       </div>
       <div style={{ display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
-        <button className="btn" onClick={openLogModal}><LuCirclePlus /> Nuevo registro</button>
+        <button className="btn" onClick={openLogModal}><LuCirclePlus /> Cargar registros</button>
         <Link to="/logs" className="btn"><LuList />Ver registros</Link>
         <button className="btn" onClick={()=> setIsPatientOpen(true)}><LuUserPlus /> Nuevo paciente</button>
         <Link to="/patients" className="btn"><LuUsers />Ver pacientes</Link>
@@ -179,14 +76,14 @@ function Home() {
           <h3>Últimos registros</h3>
           <div className="box log-list">
             {!patientsError && recentLogs.length === 0 && <p>No hay registros guardados.</p>}
-            {recentLogs.slice(0, 5).map((log) => <LogItem key={log.id} log={log} />)}
+            {recentLogs.map((log) => <LogItem key={log.id} log={log} />)}
           </div>
         </div>
         <div style={{display: 'flex', flexDirection:'column', justifyContent: 'start', alignItems: 'stretch', gap: "1em", flex: 1}}>
           <h3 style={{ textAlign: 'start'}}>Próximos pacientes</h3>
           <div className="box log-list">
             {!patientsError && nextPatients.length === 0 && <p>No hay pacientes guardados.</p>}
-            {nextPatients.slice(0, 5).map((patient) => <PatientItem key={patient.id} patient={patient} />)}
+            {nextPatients.map((patient) => <PatientItem key={patient.id} patient={patient} />)}
           </div>
         </div>
         
@@ -195,18 +92,37 @@ function Home() {
 
       <Modal isOpen={isLogOpen}
         onClose={() => setIsLogOpen(false)}
-        title="Nuevo registro"
-        footer={<button className="btn" type="submit" form="new-log-form" disabled={patients.length === 0}>Guardar</button>}
+        title="Cargar registros"
+        className="patient-create-modal"
+        footer={<button className="btn" type="button" onClick={() => setIsLogOpen(false)}>Cerrar</button>}
       >
-        <NewLogForm
-          patients={patients}
-          onSaved={(patientId) => navigate(`/patients/${patientId}`)}
-          onPatientsReload={async () => {
-            const refreshedPatients = await getPatients();
-            setPatients(refreshedPatients);
-            return refreshedPatients;
-          }}
-        />
+        <div className="col" style={{gap:"1em", width:"100%"}}>
+          <div style={{padding:"0 1.5em"}}>
+            <div className="input-container full">
+              <SelectInput
+                style={{width: "100%"}}
+                value={selectedPatientId}
+                onChange={setSelectedPatientId}
+                placeholder="Selecciona un paciente"
+                options={patients.map((patient) => ({
+                  value: String(patient.id),
+                  label: patient.name,
+                }))}
+                className=""
+                disabled={patients.length === 0}
+              />
+              <label>Paciente</label>
+            </div>
+          </div>
+          {patients.length === 0 && <p>No hay pacientes disponibles para asociar registros.</p>}
+          {selectedPatientId && <PatientCsvImportForm
+            key={selectedPatientId}
+            patient={patients.find((patient) => patient.id === Number(selectedPatientId))}
+            onSaved={async () => {
+              setRecentLogs((await getLogs()).slice(0, HOME_DASHBOARD_LIST_LIMIT));
+            }}
+          />}
+        </div>
         {patientsError && <p role="alert">{patientsError}</p>}
       </Modal>
 

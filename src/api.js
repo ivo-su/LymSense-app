@@ -169,6 +169,23 @@ export function createLog(log) {
   });
 }
 
+export function buildPatientSessionImportPayload(payload) {
+  return {
+    filename: payload.filename,
+    sessions: payload.sessions.map(({ sessionNumber, measurements }) => ({
+      session_number: sessionNumber,
+      measurements,
+    })),
+  };
+}
+
+export function importPatientSessions(patientId, payload) {
+  return request(`/patients/${patientId}/logs/import`, {
+    method: "POST",
+    body: JSON.stringify(buildPatientSessionImportPayload(payload)),
+  });
+}
+
 export function getLogs() {
   return request("/logs");
 }
