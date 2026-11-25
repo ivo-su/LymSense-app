@@ -1,14 +1,14 @@
 import { LuChartLine, LuHash, LuHistory, LuTrash2, LuUser } from "react-icons/lu"
 import { Link } from "react-router"
 
-function formatLdex(value) {
+function formatRatio(value) {
   return value == null || !Number.isFinite(Number(value)) ? "-" : Number(value).toFixed(2);
 }
 
 function PatientItem({ patient, onDelete }){
   const patientId = patient?.id ?? 1;
   const patientName = patient?.name ?? "Paciente sin nombre";
-  const latestLdex = patient?.latest_ldex;
+  const latestRatio = patient?.latest_ratio;
   const logCount = patient?.log_count ?? patient?.logs?.length ?? 0;
   const timeSinceLastLog = getTimeSinceLastLog(patient?.last_log_at);
 
@@ -41,7 +41,7 @@ function PatientItem({ patient, onDelete }){
         <div className="icon-container">
           <LuChartLine size={18} /> 
         </div> 
-        {formatLdex(latestLdex)}
+        {formatRatio(latestRatio)}
       </div>
       <div style={{ display: 'flex', flexDirection: 'row', gap: ".5em", justifyContent: 'center', alignItems: 'center'}}>
         <div className="icon-container">

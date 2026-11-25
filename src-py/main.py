@@ -283,8 +283,39 @@ def patient_from_row(row):
         "created_at": row["created_at"],
         "last_log_at": row["last_log_at"] if "last_log_at" in row.keys() else None,
         "log_count": row["log_count"] if "log_count" in row.keys() else 0,
-        "latest_ldex": row["latest_ldex"] if "latest_ldex" in row.keys() else None,
+        "latest_ratio": row["latest_ratio"] if "latest_ratio" in row.keys() else None,
     }
+
+
+def latest_csv_ratio(logs):
+    previous_reference = None
+    latest_ratio = None
+    sessions = sorted(
+        (log for log in logs if log["session_number"] is not None),
+        key=lambda log: (int(log["session_number"]), int(log["id"])),
+    )
+
+    for session in sessions:
+        measurements = json.loads(session["content"])
+        reference = next(
+            (float(item["impedance"]) for item in measurements if item["type"] == "REF"),
+            None,
+        )
+        affected = next(
+            (float(item["impedance"]) for item in measurements if item["type"] == "AFE"),
+            None,
+        )
+        if reference is not None and math.isfinite(reference):
+            previous_reference = reference
+        if (
+            previous_reference is not None
+            and affected is not None
+            and math.isfinite(affected)
+            and affected != 0
+        ):
+            latest_ratio = previous_reference / affected
+
+    return latest_ratio
 
 
 initialize_database()
@@ -625,14 +656,7 @@ def list_patients(search: str = Query(default="", max_length=200), user: dict = 
         rows = connection.execute(
             """
                  SELECT patients.*, MAX(logs.imported_at) AS last_log_at,
-                     COUNT(logs.id) AS log_count,
-                     (
-                         SELECT latest_log.ldex
-                         FROM logs AS latest_log
-                         WHERE latest_log.patient_id = patients.id
-                         ORDER BY latest_log.imported_at DESC, latest_log.id DESC
-                         LIMIT 1
-                     ) AS latest_ldex
+                     COUNT(logs.id) AS log_count
             FROM patients
             LEFT JOIN logs ON logs.patient_id = patients.id
             WHERE patients.name LIKE ? COLLATE NOCASE
@@ -641,7 +665,26 @@ def list_patients(search: str = Query(default="", max_length=200), user: dict = 
             """,
             (f"%{search.strip()}%",),
         ).fetchall()
-    return [patient_from_row(row) for row in rows]
+        patient_ids = [row["id"] for row in rows]
+        logs_by_patient = {patient_id: [] for patient_id in patient_ids}
+        if patient_ids:
+            placeholders = ",".join("?" for _ in patient_ids)
+            logs = connection.execute(
+                f"""
+                SELECT id, patient_id, content, session_number
+                FROM logs
+                WHERE patient_id IN ({placeholders}) AND session_number IS NOT NULL
+                ORDER BY session_number ASC, id ASC
+                """,
+                patient_ids,
+            ).fetchall()
+            for log in logs:
+                logs_by_patient[log["patient_id"]].append(log)
+
+    patients = [patient_from_row(row) for row in rows]
+    for patient in patients:
+        patient["latest_ratio"] = latest_csv_ratio(logs_by_patient[patient["id"]])
+    return patients
 
 
 @app.get("/patients/{patient_id}")
@@ -650,14 +693,7 @@ def get_patient(patient_id: int, user: dict = Depends(get_current_user)):
         patient = connection.execute(
             """
                  SELECT patients.*, MAX(logs.imported_at) AS last_log_at,
-                     COUNT(logs.id) AS log_count,
-                     (
-                         SELECT latest_log.ldex
-                         FROM logs AS latest_log
-                         WHERE latest_log.patient_id = patients.id
-                         ORDER BY latest_log.imported_at DESC, latest_log.id DESC
-                         LIMIT 1
-                     ) AS latest_ldex
+                     COUNT(logs.id) AS log_count
             FROM patients
             LEFT JOIN logs ON logs.patient_id = patients.id
             WHERE patients.id = ?
@@ -692,6 +728,7 @@ def get_patient(patient_id: int, user: dict = Depends(get_current_user)):
         ).fetchall()
 
     result = patient_from_row(patient)
+    result["latest_ratio"] = latest_csv_ratio(logs)
     result["logs"] = [
         {
             **dict(log),

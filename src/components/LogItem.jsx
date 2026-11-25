@@ -13,7 +13,7 @@ function LogItem({ log, onDelete, onReference }){
     : "Sin fecha";
   const measurementSummary = (log?.measurements || [])
     .map((measurement) => `${measurement.type}: ${measurement.impedance}`)
-    .join(" · ");
+    .join(" - ");
 
   return <>
     <div className="log-list-item">

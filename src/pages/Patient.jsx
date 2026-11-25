@@ -345,27 +345,27 @@ function Patient(){
     <div className="box" style={{ display: "flex", justifyContent:"start", alignItems: "center", gap: "1em" }}>
     <BackButton />
     <h1>Historial de {patient.name}</h1>
-    <div className="patient-actions">
-      <button className="btn" type="button" style={{background:"none", border:"none", padding:"0", boxShadow:"none", margin:"0 15px 0 0"}} onClick={handleGenerateReport} disabled={isGeneratingReport}>
+  </div>
+
+    <div className="patient-overview">
+    <div className='box' style={{width:"100%"}}>
+      <div className="patient-actions" style={{margin:".5em 0 1.5em 0"}}>
+      <h3>Información</h3>
+      <button className="btn" type="button" style={{background:"none", border:"none", padding:"0", boxShadow:"none", margin:"0 15px 0 auto"}} onClick={handleGenerateReport} disabled={isGeneratingReport}>
         <LuFileText /> {isGeneratingReport ? "Generando..." : "Generar informe"}
       </button>
       <button className="btn" style={{background:"none", border:"none", padding:"0", boxShadow:"none"}} type="button" onClick={() => setIsLogOpen(true)}>
         <LuCirclePlus /> Cargar mediciones
       </button>
     </div>
-  </div>
-
-    <div className="patient-overview">
-    <div className='box patient-info'>
-      <h3>Información</h3>
+      <div className="patient-info">
       <span>Nombre: {patient.name}</span>
       <span>Registros: {patient.logs.length}</span>
       <span>Miembro afectado: {affectedLimb}</span>
       <span>Sexo: {sexLabels[patient.gender] || "No especificado"}</span>
       <span>Último registro: {latestLog ? new Date(latestLog.imported_at).toLocaleDateString("es-AR") : 'Sin registros'}</span>
       <span>N.º de historia clínica: {patient.external_id || "No especificado"}</span>
-
-
+      </div>
     </div>
     </div>
     <div className="box">

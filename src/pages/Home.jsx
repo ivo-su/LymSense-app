@@ -63,24 +63,30 @@ function Home() {
       <div className="box" style={{display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
         <h1>Bienvenido!</h1>
         {/* <span style={{ margin: "0 0 0 auto", fontSize: '0.9em', color: '#666', display: 'flex', alignItems: 'center', gap: "0.5em" }}><LuTriangleAlert size={20} /> El dispositivo está sin conexión</span> */}
+        <button className="btn bare" style={{margin: "0 0 0 auto"}} onClick={openLogModal}><LuCirclePlus /> Cargar registros</button>
+        <button className="btn bare" onClick={()=> setIsPatientOpen(true)}><LuUserPlus /> Nuevo paciente</button>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
-        <button className="btn" onClick={openLogModal}><LuCirclePlus /> Cargar registros</button>
+      {/* <div style={{ display: 'flex', justifyContent: 'start', alignItems: 'center', gap: "1em"}}>
         <Link to="/logs" className="btn"><LuList />Ver registros</Link>
-        <button className="btn" onClick={()=> setIsPatientOpen(true)}><LuUserPlus /> Nuevo paciente</button>
         <Link to="/patients" className="btn"><LuUsers />Ver pacientes</Link>
-      </div>
+      </div> */}
 
       <div style={{display: 'flex', flexDirection:'row', justifyContent: 'space-between', alignItems: 'stretch', gap: "1em", marginTop: "1em"}}>
         <div style={{display: 'flex', flexDirection:'column', justifyContent: 'start', alignItems: 'stretch', gap: "1em", flex: 1}}>
+          <div style={{display: 'flex', flexDirection:'row', justifyContent: 'space-between', alignItems: 'center', padding: "0 1.5em"}}>
           <h3>Últimos registros</h3>
+          <Link to="/logs" style={{margin: "0 0 0 auto"}}>Ver todos</Link>
+          </div>
           <div className="box log-list">
             {!patientsError && recentLogs.length === 0 && <p>No hay registros guardados.</p>}
             {recentLogs.map((log) => <LogItem key={log.id} log={log} />)}
           </div>
         </div>
         <div style={{display: 'flex', flexDirection:'column', justifyContent: 'start', alignItems: 'stretch', gap: "1em", flex: 1}}>
-          <h3 style={{ textAlign: 'start'}}>Próximos pacientes</h3>
+          <div style={{display: 'flex', flexDirection:'row', justifyContent: 'space-between', alignItems: 'center', padding: "0 1.5em"}}>
+            <h3 style={{ textAlign: 'start'}}>Próximos pacientes</h3>
+            <Link to="/patients" style={{margin: "0 0 0 auto"}}>Ver todos</Link>
+          </div>
           <div className="box log-list">
             {!patientsError && nextPatients.length === 0 && <p>No hay pacientes guardados.</p>}
             {nextPatients.map((patient) => <PatientItem key={patient.id} patient={patient} />)}

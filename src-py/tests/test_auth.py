@@ -535,7 +535,10 @@ def test_csv_session_import_preserves_partial_measurements_and_is_idempotent():
         selected_reference = client.patch(f"/logs/{logs[2]['id']}/reference")
         assert selected_reference.status_code == 200, selected_reference.text
         assert selected_reference.json()["reference"] == 1
-        assert client.get(f"/patients/{patient['id']}").json()["logs"][2]["reference"] == 1
+        patient_details = client.get(f"/patients/{patient['id']}").json()
+        assert patient_details["logs"][2]["reference"] == 1
+        assert round(patient_details["latest_ratio"], 4) == 1.0001
+        assert round(client.get("/patients").json()[0]["latest_ratio"], 4) == 1.0001
 
 
 def test_csv_session_import_rejects_duplicate_reading_types():

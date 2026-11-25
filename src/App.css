@@ -812,7 +812,7 @@ form.col{
     box-sizing: border-box;
     gap: 1em;
 
-    padding: 1em 1.5em;
+    /* padding: 1em 1.5em; */
   }
 
   .patient-info h3 {
@@ -822,10 +822,6 @@ form.col{
 @media (max-width: 1000px) {
   .graph-container{
     height: 300px;
-  }
-
-  .patient-overview {
-    flex-wrap: wrap;
   }
 
 }
