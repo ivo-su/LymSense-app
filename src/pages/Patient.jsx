@@ -13,24 +13,14 @@ import { isTauri } from '@tauri-apps/api/core';
 function formatReportImpedance(value) {
   const impedance = Number(value);
   if (value == null || !Number.isFinite(impedance)) {
-    return { text: "Sin datos", ohms: false };
+    return { text: "-", ohms: false };
   }
   return { text: String(impedance), ohms: true };
 }
 
-function formatReportRatio(reference, affected) {
-  const referenceValue = Number(reference);
-  const affectedValue = Number(affected);
-  if (
-    reference == null
-    || affected == null
-    || !Number.isFinite(referenceValue)
-    || !Number.isFinite(affectedValue)
-    || affectedValue === 0
-  ) {
-    return "Sin datos";
-  }
-  return (referenceValue / affectedValue).toFixed(2);
+function formatReportRatio(value) {
+  const ratio = Number(value);
+  return value == null || !Number.isFinite(ratio) ? "-" : ratio.toFixed(2);
 }
 
 function generatePatientReport(jsPDF, patient, doctor, generatedAt, sexLabel, affectedLimb, birthOrAge) {
@@ -60,7 +50,7 @@ function generatePatientReport(jsPDF, patient, doctor, generatedAt, sexLabel, af
   };
 
   const addDetail = (label, value) => {
-    const valueLines = pdf.splitTextToSize(String(value || "Sin datos"), contentWidth - 48);
+    const valueLines = pdf.splitTextToSize(String(value || "-"), contentWidth - 48);
     const rowHeight = Math.max(5, valueLines.length * 4.5);
     ensureSpace(rowHeight);
     pdf.setFontSize(9);
@@ -147,6 +137,10 @@ function generatePatientReport(jsPDF, patient, doctor, generatedAt, sexLabel, af
     drawTableHeader();
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7.5);
+    const sessionRatios = getSessionReferenceRatios(patient.logs);
+    const ratioByLogId = new Map(
+      sessionRatios.logIds.map((logId, index) => [logId, sessionRatios.values[index]])
+    );
     patient.logs.forEach((log) => {
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(7.5);
@@ -161,7 +155,7 @@ function generatePatientReport(jsPDF, patient, doctor, generatedAt, sexLabel, af
         { text: log.imported_at ? new Date(log.imported_at).toLocaleDateString("es-AR") : "Sin fecha", ohms: false },
         formatReportImpedance(referenceImpedance),
         formatReportImpedance(affectedImpedance),
-        { text: formatReportRatio(referenceImpedance, affectedImpedance), ohms: false },
+        { text: formatReportRatio(ratioByLogId.get(log.id)), ohms: false },
       ];
       const wrappedValues = values.map((value, index) =>
         pdf.splitTextToSize(value.text, columns[index].width - 2)
@@ -250,10 +244,10 @@ function Patient(){
       const sexLabel = sexLabels[patient.gender] || "No especificado";
       const affectedLimb = patient.affected_side && patient.affected_region
         ? `${patient.affected_side === "right" ? "Derecho" : "Izquierdo"} ${patient.affected_region === "arm" ? "brazo" : "pierna"}`
-        : "Sin datos";
+        : "-";
       const birthOrAge = patient.date_of_birth
         ? new Date(`${patient.date_of_birth}T00:00:00`).toLocaleDateString("es-AR")
-        : patient.age_years != null ? `${patient.age_years} años` : "Sin datos";
+        : patient.age_years != null ? `${patient.age_years} años` : "-";
       const report = generatePatientReport(
         jsPDF,
         patient,
@@ -331,7 +325,7 @@ function Patient(){
   const hasFixedRatios = getFixedReferenceRatios(csvLogs, referenceLog).values.some(Number.isFinite);
   const birthOrAge = patient.date_of_birth
     ? new Date(`${patient.date_of_birth}T00:00:00`).toLocaleDateString("es-AR")
-    : patient.age_years != null ? `${patient.age_years} años` : "Sin datos";
+    : patient.age_years != null ? `${patient.age_years} años` : "-";
   const sexLabels = {
     female: "Femenino",
     male: "Masculino",
@@ -339,7 +333,7 @@ function Patient(){
   };
   const affectedLimb = patient.affected_side && patient.affected_region
     ? `${patient.affected_side === "right" ? "Derecho" : "Izquierdo"} ${patient.affected_region === "arm" ? "brazo" : "pierna"}`
-    : "Sin datos";
+    : "-";
 
   return (<>
     <div className="box" style={{ display: "flex", justifyContent:"start", alignItems: "center", gap: "1em" }}>

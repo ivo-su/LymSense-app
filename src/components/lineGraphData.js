@@ -14,9 +14,24 @@ function getCsvSessions(logs) {
     );
 }
 
+function getSessionsFromFirstUsableRatio(logs) {
+  const sessions = getCsvSessions(logs);
+  let previousReference = null;
+  const firstRatioIndex = sessions.findIndex((session) => {
+    const reference = getImpedance(session, "REF");
+    if (reference != null) previousReference = reference;
+    const affected = getImpedance(session, "AFE");
+    return previousReference != null && affected != null && affected !== 0;
+  });
+
+  return firstRatioIndex === -1
+    ? { sessions: [], firstRatioIndex: -1 }
+    : { sessions, firstRatioIndex };
+}
+
 export function getSessionReferenceRatios(logs) {
   let previousReference = null;
-  const sessions = getCsvSessions(logs);
+  const { sessions, firstRatioIndex } = getSessionsFromFirstUsableRatio(logs);
   const values = sessions.map((session) => {
     const sessionReference = getImpedance(session, "REF");
     if (sessionReference != null) previousReference = sessionReference;
@@ -26,12 +41,16 @@ export function getSessionReferenceRatios(logs) {
       : previousReference / affected;
   });
 
-  return { labels: sessions.map((session) => session.session_number), values };
+  return {
+    labels: sessions.slice(firstRatioIndex).map((session) => session.session_number),
+    values: values.slice(firstRatioIndex),
+    logIds: sessions.slice(firstRatioIndex).map((session) => session.id),
+  };
 }
 
 export function getFixedReferenceRatios(logs, referenceLog) {
   const reference = referenceLog ? getImpedance(referenceLog, "REF") : null;
-  const sessions = getCsvSessions(logs);
+  const { sessions, firstRatioIndex } = getSessionsFromFirstUsableRatio(logs);
   const values = sessions.map((session) => {
     const affected = getImpedance(session, "AFE");
     return reference == null || affected == null || affected === 0
@@ -39,5 +58,8 @@ export function getFixedReferenceRatios(logs, referenceLog) {
       : reference / affected;
   });
 
-  return { labels: sessions.map((session) => session.session_number), values };
+  return {
+    labels: sessions.slice(firstRatioIndex).map((session) => session.session_number),
+    values: values.slice(firstRatioIndex),
+  };
 }

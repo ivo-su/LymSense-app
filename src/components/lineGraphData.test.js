@@ -26,6 +26,7 @@ test("uses the current REF or nearest earlier REF for each AFE session", () => {
   assert.deepEqual(getSessionReferenceRatios([...logs, legacyLog].reverse()), {
     labels: [1, 2, 3, 4, 5],
     values: [2, 4, null, 4, null],
+    logIds: [1, 2, 3, 4, 5],
   });
 });
 
@@ -46,7 +47,48 @@ test("leaves AFE sessions without any earlier REF without a ratio", () => {
   ];
 
   assert.deepEqual(getSessionReferenceRatios(sessions), {
-    labels: [1, 2],
-    values: [null, 4],
+    labels: [2],
+    values: [4],
+    logIds: [2],
+  });
+});
+
+test("starts both chart series when REF and AFE are first available", () => {
+  const sessions = [
+    { id: 1, session_number: 1, measurements: [{ type: "AFE", impedance: 50 }] },
+    { id: 2, session_number: 2, measurements: [{ type: "AFE", impedance: 45 }] },
+    { id: 3, session_number: 3, measurements: [
+      { type: "REF", impedance: 120 },
+      { type: "AFE", impedance: 40 },
+    ] },
+    { id: 4, session_number: 4, measurements: [{ type: "AFE", impedance: 30 }] },
+  ];
+
+  assert.deepEqual(getSessionReferenceRatios(sessions), {
+    labels: [3, 4],
+    values: [3, 4],
+    logIds: [3, 4],
+  });
+  assert.deepEqual(getFixedReferenceRatios(sessions, sessions[2]), {
+    labels: [3, 4],
+    values: [3, 4],
+  });
+});
+
+test("uses the latest REF available in each session ratio", () => {
+  const sessions = [
+    { id: 1, session_number: 1, measurements: [{ type: "REF", impedance: 100 }] },
+    { id: 2, session_number: 2, measurements: [{ type: "REF", impedance: 110 }] },
+    { id: 3, session_number: 3, measurements: [
+      { type: "REF", impedance: 120 },
+      { type: "AFE", impedance: 40 },
+    ] },
+    { id: 4, session_number: 4, measurements: [{ type: "AFE", impedance: 30 }] },
+  ];
+
+  assert.deepEqual(getSessionReferenceRatios(sessions), {
+    labels: [3, 4],
+    values: [3, 4],
+    logIds: [3, 4],
   });
 });
